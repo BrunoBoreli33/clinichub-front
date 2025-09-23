@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Shield, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 import clinicHero from "@/assets/clinic-hero.jpg";
 
 const LoginForm = () => {
@@ -149,12 +150,14 @@ const LoginForm = () => {
               </form>
 
               <div className="mt-6 text-center">
-                <Button 
-                  variant="ghost" 
-                  className="text-sm text-muted-foreground hover:text-primary"
-                >
-                  Esqueceu sua senha?
-                </Button>
+                <Link to="/forgot-password">
+                  <Button 
+                    variant="ghost" 
+                    className="text-sm text-muted-foreground hover:text-primary"
+                  >
+                    Esqueceu sua senha?
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
