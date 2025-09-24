@@ -19,8 +19,8 @@ const ForgotPassword = () => {
     
     if (!email) {
       toast({
-        title: "Email obrigatório",
-        description: "Por favor, digite seu email para continuar.",
+        title: "Required field",
+        description: "Please enter your email to continue.",
         variant: "destructive",
       });
       return;
@@ -30,8 +30,8 @@ const ForgotPassword = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       toast({
-        title: "Email inválido",
-        description: "Por favor, digite um email válido.",
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
         variant: "destructive",
       });
       return;
@@ -44,8 +44,8 @@ const ForgotPassword = () => {
       setEmailSent(true);
       setIsLoading(false);
       toast({
-        title: "Email enviado com sucesso!",
-        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+        title: "Email sent successfully!",
+        description: "Check your inbox to reset your password.",
       });
     }, 2000);
   };
@@ -69,10 +69,10 @@ const ForgotPassword = () => {
                     <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                       <Mail className="w-6 h-6" />
                     </div>
-                    <h2 className="text-2xl font-bold">Email Enviado</h2>
+                    <h2 className="text-2xl font-bold">Email Sent</h2>
                   </div>
                   <p className="text-lg opacity-90 max-w-md">
-                    Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.
+                    Check your inbox and follow the instructions to reset your password.
                   </p>
                 </div>
               </div>
@@ -89,10 +89,10 @@ const ForgotPassword = () => {
                   </div>
                 </div>
                 <CardTitle className="text-2xl font-bold text-foreground">
-                  Email Enviado!
+                  Email Sent!
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  Enviamos as instruções para redefinir sua senha para:
+                  We sent password reset instructions to:
                 </CardDescription>
               </CardHeader>
               
@@ -102,9 +102,9 @@ const ForgotPassword = () => {
                 </div>
                 
                 <div className="text-sm text-muted-foreground space-y-2">
-                  <p>• Verifique sua caixa de entrada</p>
-                  <p>• Se não encontrar, verifique a pasta de spam</p>
-                  <p>• O link expira em 24 horas</p>
+                  <p>• Check your inbox</p>
+                  <p>• If not found, check your spam folder</p>
+                  <p>• The link expires in 24 hours</p>
                 </div>
 
                 <div className="space-y-3">
@@ -116,7 +116,7 @@ const ForgotPassword = () => {
                     variant="outline"
                     className="w-full"
                   >
-                    Tentar outro email
+                    Try another email
                   </Button>
                   
                   <Link to="/">
@@ -125,7 +125,7 @@ const ForgotPassword = () => {
                       className="w-full text-muted-foreground hover:text-primary"
                     >
                       <ArrowLeft className="w-4 h-4 mr-2" />
-                      Voltar ao login
+                      Back to login
                     </Button>
                   </Link>
                 </div>
@@ -155,11 +155,11 @@ const ForgotPassword = () => {
                   <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                     <Shield className="w-6 h-6" />
                   </div>
-                  <h2 className="text-2xl font-bold">Recuperação de Senha</h2>
-                </div>
-                <p className="text-lg opacity-90 max-w-md">
-                  Digite seu email para receber as instruções de redefinição de senha.
-                </p>
+                    <h2 className="text-2xl font-bold">Password Recovery</h2>
+                  </div>
+                  <p className="text-lg opacity-90 max-w-md">
+                    Enter your email to receive password reset instructions.
+                  </p>
               </div>
             </div>
           </div>
@@ -175,28 +175,28 @@ const ForgotPassword = () => {
                 </div>
               </div>
               <CardTitle className="text-2xl font-bold text-foreground">
-                Esqueceu sua senha?
+                Forgot your password?
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                Digite seu email e enviaremos instruções para redefinir sua senha
+                Enter your email and we'll send you reset instructions
               </CardDescription>
             </CardHeader>
             
             <CardContent>
               <form onSubmit={handleResetPassword} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium text-foreground">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu.email@clinica.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 bg-background border-border focus:ring-primary"
-                    required
-                  />
+                <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-11 bg-background border-border focus:ring-primary"
+                  required
+                />
                 </div>
 
                 <Button
@@ -207,12 +207,12 @@ const ForgotPassword = () => {
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Enviando...
+                      Sending...
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4" />
-                      Enviar instruções
+                      Send instructions
                     </div>
                   )}
                 </Button>
@@ -225,7 +225,7 @@ const ForgotPassword = () => {
                     className="text-sm text-muted-foreground hover:text-primary"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Voltar ao login
+                    Back to login
                   </Button>
                 </Link>
               </div>
@@ -236,7 +236,7 @@ const ForgotPassword = () => {
           <div className="mt-6 text-center text-xs text-muted-foreground">
             <p className="flex items-center justify-center gap-1">
               <Shield className="w-3 h-3" />
-              Processo seguro de recuperação de senha
+              Secure password recovery process
             </p>
           </div>
         </div>
