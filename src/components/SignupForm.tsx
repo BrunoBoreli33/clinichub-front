@@ -31,8 +31,8 @@ const SignupForm = () => {
     
     if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
       toast({
-        title: "Required fields",
-        description: "Please fill in all fields.",
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos.",
         variant: "destructive",
       });
       return;
@@ -40,8 +40,8 @@ const SignupForm = () => {
 
     if (formData.password !== formData.confirmPassword) {
       toast({
-        title: "Password mismatch",
-        description: "Passwords do not match.",
+        title: "Senhas não coincidem",
+        description: "As senhas digitadas não coincidem.",
         variant: "destructive",
       });
       return;
@@ -49,11 +49,11 @@ const SignupForm = () => {
 
     setIsLoading(true);
     
-    // Simulate registration
+    // Simular registro
     setTimeout(() => {
       toast({
-        title: "Account created successfully!",
-        description: "Please check your email to verify your account.",
+        title: "Conta criada com sucesso!",
+        description: "Verifique seu email para ativar sua conta.",
       });
       setIsLoading(false);
     }, 2000);
@@ -75,7 +75,7 @@ const SignupForm = () => {
               </div>
             </div>
             <h2 className="text-xl font-semibold text-foreground mb-2">
-              Create your account
+              Criar sua conta
             </h2>
           </CardHeader>
           
@@ -83,14 +83,14 @@ const SignupForm = () => {
             <form onSubmit={handleSignup} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-sm font-medium text-muted-foreground">
-                  Full Name
+                  Nome Completo
                 </Label>
                 <div className="relative">
                   <Input
                     id="name"
                     name="name"
                     type="text"
-                    placeholder="Enter your full name"
+                    placeholder="Digite seu nome completo"
                     value={formData.name}
                     onChange={handleChange}
                     className="h-12 bg-background border-border focus:ring-primary pr-12"
@@ -104,14 +104,14 @@ const SignupForm = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-muted-foreground">
-                  Email Address
+                  Endereço de Email
                 </Label>
                 <div className="relative">
                   <Input
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="Digite seu email"
                     value={formData.email}
                     onChange={handleChange}
                     className="h-12 bg-background border-border focus:ring-primary pr-12"
@@ -125,14 +125,14 @@ const SignupForm = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">
-                  Password
+                  Senha
                 </Label>
                 <div className="relative">
                   <Input
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Create a password"
+                    placeholder="Crie uma senha"
                     value={formData.password}
                     onChange={handleChange}
                     className="h-12 bg-background border-border focus:ring-primary pr-12"
@@ -156,14 +156,14 @@ const SignupForm = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-medium text-muted-foreground">
-                  Confirm Password
+                  Confirmar Senha
                 </Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
+                    placeholder="Confirme sua senha"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     className="h-12 bg-background border-border focus:ring-primary pr-12"
@@ -193,21 +193,21 @@ const SignupForm = () => {
                 {isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Creating account...
+                    Criando conta...
                   </div>
                 ) : (
-                  "Create Account"
+                  "Criar Conta"
                 )}
               </Button>
 
               <div className="text-center">
-                <span className="text-sm text-muted-foreground">Already have an account? </span>
+                <span className="text-sm text-muted-foreground">Já tem uma conta? </span>
                 <Link to="/">
                   <Button 
                     variant="ghost" 
                     className="text-sm text-primary hover:text-primary/80 p-0 h-auto"
                   >
-                    Login here
+                    Faça login aqui
                   </Button>
                 </Link>
               </div>
