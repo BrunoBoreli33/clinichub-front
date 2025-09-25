@@ -2,6 +2,9 @@ import { Draggable } from "@hello-pangea/dnd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreVertical, Tag, ArrowRight } from "lucide-react";
 import type { Chat, ChatTag } from "@/components/ChatColumns";
 
 interface ChatColumnProps {
@@ -10,12 +13,19 @@ interface ChatColumnProps {
   color: string;
   tags: ChatTag[];
   onChatClick: (chat: Chat) => void;
+  onTagChange: (chatId: string, tagIds: string[]) => void;
+  onMoveChat: (chatId: string, targetColumn: string) => void;
+  columns: Array<{ id: string; title: string; color: string }>;
 }
 
-export const ChatColumn = ({ title, chats, color, tags, onChatClick }: ChatColumnProps) => {
+export const ChatColumn = ({ title, chats, color, tags, onChatClick, onTagChange, onMoveChat, columns }: ChatColumnProps) => {
   const getTagColor = (tagId: string) => {
     const tag = tags.find(t => t.id === tagId);
     return tag?.color || "#6B7280";
+  };
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   return (
@@ -38,7 +48,7 @@ export const ChatColumn = ({ title, chats, color, tags, onChatClick }: ChatColum
                 ref={provided.innerRef}
                 {...provided.draggableProps}
                 {...provided.dragHandleProps}
-                className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                className={`group p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
                   snapshot.isDragging 
                     ? "bg-primary/10 border-primary shadow-lg" 
                     : "bg-card hover:bg-muted/50"
@@ -66,6 +76,29 @@ export const ChatColumn = ({ title, chats, color, tags, onChatClick }: ChatColum
                           </Badge>
                         )}
                         <span className="text-xs text-muted-foreground">{chat.time}</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={handleMenuClick}>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {}}>
+                              <Tag className="h-4 w-4 mr-2" />
+                              Alterar Etiquetas
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {columns.filter(col => col.id !== title.toLowerCase().replace(/\s+/g, '')).map(column => (
+                              <DropdownMenuItem 
+                                key={column.id}
+                                onClick={() => onMoveChat(chat.id, column.id)}
+                              >
+                                <ArrowRight className="h-4 w-4 mr-2" />
+                                Mover para {column.title}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                     
