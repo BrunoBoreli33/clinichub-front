@@ -36,6 +36,8 @@ const LoginForm = () => {
         description: "Redirecionando para o painel de controle...",
       });
       setIsLoading(false);
+      // Redirect to dashboard
+      window.location.href = "/dashboard";
     }, 2000);
   };
 
