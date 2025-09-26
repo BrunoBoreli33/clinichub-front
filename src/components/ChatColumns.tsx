@@ -114,9 +114,9 @@ const ChatColumns = () => {
   const columns = [
     { id: "vip", title: "Atendimento VIP", color: "from-yellow-400 to-orange-500" },
     { id: "humanizado", title: "Atendimento Humanizado", color: "from-blue-400 to-blue-600" },
+    { id: "inicial", title: "Atendimento Inicial", color: "from-green-400 to-green-600" },
     { id: "repescagem", title: "Repescagem", color: "from-red-400 to-red-600" },
-    { id: "tarefa", title: "Tarefa", color: "from-purple-400 to-purple-600" },
-    { id: "inicial", title: "Atendimento Inicial", color: "from-green-400 to-green-600" }
+    { id: "tarefa", title: "Tarefa", color: "from-purple-400 to-purple-600" }
   ];
 
   const moveChat = (chatId: string, fromColumn: string, toColumn: string) => {
@@ -140,9 +140,9 @@ const ChatColumns = () => {
   };
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-120px)]">
+    <div className="flex gap-4 h-[calc(100vh-120px)] justify-center">
       {/* Colunas de Chat */}
-      <div className="flex gap-4 flex-1">
+      <div className="flex gap-4 max-w-7xl w-full justify-center">
         {columns.map(column => (
           <ChatColumn
             key={column.id}
