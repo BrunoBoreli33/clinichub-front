@@ -142,7 +142,7 @@ const ChatColumns = () => {
   return (
     <div className="flex gap-4 h-[calc(100vh-120px)] justify-center">
       {/* Colunas de Chat */}
-      <div className="flex gap-4 max-w-7xl w-full justify-center">
+      <div className="flex gap-4 justify-center">
         {columns.map(column => (
           <ChatColumn
             key={column.id}
