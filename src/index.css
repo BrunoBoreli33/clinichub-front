@@ -17,9 +17,9 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 213 31% 12%;
 
-    --primary: 142 85% 40%;
+    --primary: 210 83% 53%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 142 85% 50%;
+    --primary-glow: 210 83% 65%;
     
     --secondary: 210 40% 96%;
     --secondary-foreground: 213 31% 12%;
@@ -27,7 +27,7 @@ All colors MUST be HSL.
     --muted: 210 40% 96%;
     --muted-foreground: 213 16% 46%;
 
-    --accent: 142 85% 45%;
+    --accent: 142 76% 36%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -35,16 +35,16 @@ All colors MUST be HSL.
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 142 85% 40%;
+    --ring: 210 83% 53%;
     
-    /* WhatsApp theme gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(142 85% 40%), hsl(142 85% 50%));
-    --gradient-background: linear-gradient(180deg, hsl(120 15% 97%), hsl(120 20% 95%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(120 20% 98%));
+    /* Medical theme gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-background: linear-gradient(180deg, hsl(var(--background)), hsl(210 40% 95%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 40% 98%));
     
-    /* WhatsApp-style shadows */
-    --shadow-medical: 0 2px 8px -2px hsl(142 85% 40% / 0.15);
-    --shadow-card: 0 1px 3px -1px hsl(142 85% 40% / 0.1);
+    /* Shadows */
+    --shadow-medical: 0 10px 30px -10px hsl(var(--primary) / 0.1);
+    --shadow-card: 0 4px 20px -4px hsl(var(--primary) / 0.08);
 
     --radius: 0.5rem;
 

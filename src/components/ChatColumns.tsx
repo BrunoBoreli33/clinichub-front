@@ -77,33 +77,6 @@ export const ChatColumns = () => {
     { id: "inicial", title: "Atendimento Inicial", color: "bg-green-500" }
   ];
 
-  const handleMoveChat = (chatId: string, targetColumn: string) => {
-    const sourceColumn = Object.keys(chats).find(col => 
-      chats[col].some(chat => chat.id === chatId)
-    );
-    
-    if (!sourceColumn) return;
-    
-    const newChats = { ...chats };
-    const chatIndex = newChats[sourceColumn].findIndex(chat => chat.id === chatId);
-    const [movedChat] = newChats[sourceColumn].splice(chatIndex, 1);
-    newChats[targetColumn].push(movedChat);
-    
-    setChats(newChats);
-  };
-
-  const handleTagChange = (chatId: string, tagIds: string[]) => {
-    const newChats = { ...chats };
-    for (const column in newChats) {
-      const chatIndex = newChats[column].findIndex(chat => chat.id === chatId);
-      if (chatIndex !== -1) {
-        newChats[column][chatIndex].tags = tagIds;
-        break;
-      }
-    }
-    setChats(newChats);
-  };
-
   const handleDragEnd = (result: any) => {
     if (!result.destination) return;
 
@@ -157,9 +130,6 @@ export const ChatColumns = () => {
                       color={column.color}
                       tags={tags}
                       onChatClick={setSelectedChat}
-                      onTagChange={handleTagChange}
-                      onMoveChat={handleMoveChat}
-                      columns={columns}
                     />
                     {provided.placeholder}
                   </div>
