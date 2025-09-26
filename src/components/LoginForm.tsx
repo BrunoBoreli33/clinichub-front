@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Shield, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import clinicHero from "@/assets/clinic-hero.jpg";
 
 const LoginForm = () => {
@@ -14,6 +14,7 @@ const LoginForm = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +37,7 @@ const LoginForm = () => {
         description: "Redirecionando para o painel de controle...",
       });
       setIsLoading(false);
+      navigate('/dashboard');
     }, 2000);
   };
 
