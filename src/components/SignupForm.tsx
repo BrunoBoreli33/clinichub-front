@@ -51,7 +51,7 @@ const SignupForm = () => {
     setIsLoading(true);
     
     try {
-      const response = await fetch('http://localhost:8080/auth/register', {
+      const response = await fetch('http://localhost:8081/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
