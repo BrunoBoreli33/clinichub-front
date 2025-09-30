@@ -30,15 +30,45 @@ const LoginForm = () => {
 
     setIsLoading(true);
     
-    // Simular autenticação
-    setTimeout(() => {
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Redirecionando para o painel de controle...",
+    try {
+      const response = await fetch('http://localhost:8080/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userName', data.name);
+        
+        toast({
+          title: "Login realizado com sucesso!",
+          description: `Bem-vindo de volta, ${data.name}!`,
+        });
+        
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: "Erro ao fazer login",
+          description: "Email ou senha incorretos.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro de conexão",
+        description: "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-      navigate('/dashboard');
-    }, 2000);
+    }
   };
 
   return (
