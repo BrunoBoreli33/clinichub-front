@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Mail, Lock, User, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const SignupForm = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +18,6 @@ const SignupForm = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -54,10 +53,9 @@ const SignupForm = () => {
     setTimeout(() => {
       toast({
         title: "Conta criada com sucesso!",
-        description: "Redirecionando para o login...",
+        description: "Verifique seu email para ativar sua conta.",
       });
       setIsLoading(false);
-      navigate("/login");
     }, 2000);
   };
 
@@ -204,7 +202,7 @@ const SignupForm = () => {
 
               <div className="text-center">
                 <span className="text-sm text-muted-foreground">Já tem uma conta? </span>
-                <Link to="/login">
+                <Link to="/">
                   <Button 
                     variant="ghost" 
                     className="text-sm text-primary hover:text-primary/80 p-0 h-auto"
