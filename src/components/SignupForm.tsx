@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Mail, Lock, User, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const SignupForm = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +18,6 @@ const SignupForm = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -50,46 +49,14 @@ const SignupForm = () => {
 
     setIsLoading(true);
     
-    try {
-      const response = await fetch('http://localhost:8081/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userName', data.name);
-        
-        toast({
-          title: "Conta criada com sucesso!",
-          description: `Bem-vindo, ${data.name}!`,
-        });
-        
-        navigate('/dashboard');
-      } else {
-        toast({
-          title: "Erro ao criar conta",
-          description: "Este email já está cadastrado ou houve um erro no servidor.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
+    // Simular registro
+    setTimeout(() => {
       toast({
-        title: "Erro de conexão",
-        description: "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
-        variant: "destructive",
+        title: "Conta criada com sucesso!",
+        description: "Verifique seu email para ativar sua conta.",
       });
-    } finally {
       setIsLoading(false);
-    }
+    }, 2000);
   };
 
   return (
