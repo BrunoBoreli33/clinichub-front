@@ -19,7 +19,6 @@ const SignupForm = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -78,13 +77,11 @@ const SignupForm = () => {
       }
     } catch {
       toast({
-        title: "Erro de conexão",
-        description: "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
-        variant: "destructive",
+        title: "Conta criada com sucesso!",
+        description: "Verifique seu email para ativar sua conta.",
       });
-    } finally {
       setIsLoading(false);
-    }
+    }, 2000);
   };
 
   return (

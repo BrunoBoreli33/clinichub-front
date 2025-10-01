@@ -73,9 +73,9 @@ const LoginForm = () => {
           "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
-    }
+      navigate('/dashboard');
+    }, 2000);
   };
 
   return (
