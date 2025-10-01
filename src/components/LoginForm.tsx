@@ -16,9 +16,9 @@ const LoginForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast({
         title: "Campos obrigatórios",
@@ -29,41 +29,48 @@ const LoginForm = () => {
     }
 
     setIsLoading(true);
-    
+
     try {
-      const response = await fetch('http://localhost:8081/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+      const response = await fetch("http://localhost:8081/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userName', data.name);
-        
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userName", data.name);
+
         toast({
           title: "Login realizado com sucesso!",
           description: `Bem-vindo de volta, ${data.name}!`,
         });
-        
-        navigate('/dashboard');
+        navigate("/dashboard");
+      } else if (response.status === 404) {
+        toast({
+          title: "Usuário não cadastrado",
+          description: "Por favor, registre-se antes de tentar entrar.",
+          variant: "destructive",
+        });
+      } else if (response.status === 401) {
+        toast({
+          title: "Senha incorreta",
+          description: "A senha informada está errada.",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Erro ao fazer login",
-          description: "Email ou senha incorretos.",
+          description: "Ocorreu um erro inesperado. Tente novamente.",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Erro de conexão",
-        description: "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
+        description:
+          "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
         variant: "destructive",
       });
     } finally {
@@ -74,25 +81,27 @@ const LoginForm = () => {
   return (
     <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4">
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        
         {/* Lado esquerdo - Imagem e informações */}
         <div className="hidden lg:block relative">
           <div className="relative overflow-hidden rounded-2xl">
-            <img 
-              src={clinicHero} 
-              alt="Ambiente clínico moderno" 
+            <img
+              src={clinicHero}
+              alt="Ambiente clínico moderno"
               className="w-full h-[600px] object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-tr from-primary/80 via-primary/40 to-transparent">
-              <div className="absolute bottom-8 left-8 text-white">
+            <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-primary/30 to-transparent">
+              <div className="absolute bottom-8 left-8">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                    <MessageCircle className="w-6 h-6" />
+                  <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
+                    <MessageCircle className="w-6 h-6 text-white" />
                   </div>
-                  <h2 className="text-2xl font-bold">WhatsApp Business Monitor</h2>
+                  <h2 className="text-2xl font-bold text-white drop-shadow-lg">
+                    WhatsApp Business Monitor
+                  </h2>
                 </div>
-                <p className="text-lg opacity-90 max-w-md">
-                  Sistema profissional de monitoramento e gestão de mensagens WhatsApp Business para sua clínica.
+                <p className="text-lg text-white drop-shadow-md max-w-md">
+                  Sistema profissional de monitoramento e gestão de mensagens
+                  WhatsApp Business para sua clínica.
                 </p>
               </div>
             </div>
@@ -107,22 +116,20 @@ const LoginForm = () => {
                 <div className="p-2 bg-gradient-primary rounded-xl">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <CardTitle className="text-2xl font-bold text-foreground">
-                    Acesso Clínica
-                  </CardTitle>
-                </div>
+                <CardTitle className="text-2xl font-bold text-foreground">
+                  Acesso Clínica
+                </CardTitle>
               </div>
               <p className="text-muted-foreground">
                 Entre com suas credenciais para acessar o sistema de monitoramento
               </p>
             </CardHeader>
-            
+
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium text-foreground">
-                    Email ou Usuário
+                    Email
                   </Label>
                   <Input
                     id="email"
@@ -134,7 +141,7 @@ const LoginForm = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm font-medium text-foreground">
                     Senha
@@ -180,30 +187,29 @@ const LoginForm = () => {
                   )}
                 </Button>
 
+                <Link to="/signup">
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 mt-6 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300"
+                  >
+                    Registre-se
+                  </Button>
+                </Link>
+
                 <div className="text-center">
                   <Link to="/forgot-password">
-                    <Button 
-                      variant="ghost" 
-                      className="text-sm text-muted-foreground hover:text-primary"
+                    <Button
+                      variant="ghost"
+                      className="text-sm text-muted-foreground hover:text-primary hover:bg-green-500/5"
                     >
                       Esqueceu sua senha?
                     </Button>
                   </Link>
                 </div>
-
-                <Link to="/signup">
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300"
-                  >
-                    Registre-se
-                  </Button>
-                </Link>
               </form>
             </CardContent>
           </Card>
 
-          {/* Informações de segurança */}
           <div className="mt-6 text-center text-xs text-muted-foreground">
             <p className="flex items-center justify-center gap-1">
               <Shield className="w-3 h-3" />
