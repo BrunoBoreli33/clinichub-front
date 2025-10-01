@@ -69,14 +69,17 @@ const LoginForm = () => {
     } catch {
       toast({
         title: "Erro de conexão",
-        description:
-          "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
+        description: "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
         variant: "destructive",
       });
+
       setIsLoading(false);
-      navigate('/dashboard');
-    }, 2000);
-  };
+
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000); // 2 segundos
+    }
+  }; // <-- handleLogin fechado corretamente
 
   return (
     <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4">

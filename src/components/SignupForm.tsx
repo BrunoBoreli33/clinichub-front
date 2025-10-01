@@ -19,6 +19,7 @@ const SignupForm = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate(); // ← Corrigido aqui
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -75,13 +76,15 @@ const SignupForm = () => {
           variant: "destructive",
         });
       }
-    } catch {
+    } catch (error) {
       toast({
-        title: "Conta criada com sucesso!",
-        description: "Verifique seu email para ativar sua conta.",
+        title: "Erro no cadastro",
+        description: "Ocorreu um erro ao criar sua conta.",
+        variant: "destructive",
       });
-      setIsLoading(false);
-    }, 2000);
+    } finally {
+      setIsLoading(false); // ← Corrigido aqui, removeu o ', 2000'
+    }
   };
 
   return (
