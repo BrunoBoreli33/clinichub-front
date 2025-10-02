@@ -31,55 +31,123 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8081/auth/login", {
+      // PASSO 1: Fazer login e obter token
+      const loginResponse = await fetch("http://localhost:8081/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("userName", data.name);
-
-        toast({
-          title: "Login realizado com sucesso!",
-          description: `Bem-vindo de volta, ${data.name}!`,
-        });
-        navigate("/dashboard");
-      } else if (response.status === 404) {
+      if (loginResponse.status === 404) {
         toast({
           title: "Usuário não cadastrado",
           description: "Por favor, registre-se antes de tentar entrar.",
           variant: "destructive",
         });
-      } else if (response.status === 401) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (loginResponse.status === 401) {
         toast({
           title: "Senha incorreta",
           description: "A senha informada está errada.",
           variant: "destructive",
         });
-      } else {
+        setIsLoading(false);
+        return;
+      }
+
+      if (!loginResponse.ok) {
         toast({
           title: "Erro ao fazer login",
           description: "Ocorreu um erro inesperado. Tente novamente.",
           variant: "destructive",
         });
+        setIsLoading(false);
+        return;
       }
-    } catch {
+
+      // Login bem-sucedido - extrair dados
+      const loginData = await loginResponse.json();
+      const { id, name, token } = loginData;
+
+      console.log("Login bem-sucedido:", { id, name });
+
+      // PASSO 2: Buscar dados do dashboard com o token
+      const dashboardResponse = await fetch(
+        `http://localhost:8081/dashboard?userId=${id}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (dashboardResponse.status === 401) {
+        toast({
+          title: "Token inválido",
+          description: "Sua sessão expirou. Faça login novamente.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (dashboardResponse.status === 403) {
+        toast({
+          title: "Acesso negado",
+          description: "Você não tem permissão para acessar este recurso.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!dashboardResponse.ok) {
+        toast({
+          title: "Erro ao carregar dashboard",
+          description: "Não foi possível carregar os dados. Tente novamente.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Dashboard carregado com sucesso
+      const dashboardData = await dashboardResponse.json();
+      
+      console.log("Dados do dashboard recebidos:", dashboardData);
+
+      // PASSO 3: Salvar dados no localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("userId", id);
+      localStorage.setItem("userName", name);
+      localStorage.setItem("userEmail", dashboardData.user.email);
+      localStorage.setItem("userRole", dashboardData.user.role);
+      localStorage.setItem("dashboardData", JSON.stringify(dashboardData));
+
+      // PASSO 4: Mostrar mensagem de sucesso
+      toast({
+        title: "Login realizado com sucesso!",
+        description: `Bem-vindo de volta, ${name}!`,
+      });
+
+      // PASSO 5: Redirecionar para o dashboard do frontend
+      navigate("/dashboard");
+
+    } catch (error) {
+      console.error("Erro na requisição:", error);
       toast({
         title: "Erro de conexão",
         description: "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
         variant: "destructive",
       });
-
       setIsLoading(false);
-
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000); // 2 segundos
     }
-  }; // <-- handleLogin fechado corretamente
+  };
 
   return (
     <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4">

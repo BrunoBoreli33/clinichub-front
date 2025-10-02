@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,17 +12,35 @@ import {
   User,
   MessageCircle,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
 import ChatColumns from "@/components/ChatColumns";
 import TagManager from "@/components/TagManager";
+
+// Interface para tipar os dados do dashboard
+interface DashboardData {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    confirmed: boolean;
+  };
+  // Adicione aqui outras propriedades conforme você adicionar no backend
+  // messages?: Array<any>;
+  // contacts?: Array<any>;
+  // conversations?: Array<any>;
+}
 
 // Sidebar com animação e overlay sincronizado
 const Sidebar: React.FC<{
   onClose: () => void;
   onOpenTags: () => void;
   onOpenSettings: () => void;
+  onLogout: () => void;
   isOpen: boolean;
-}> = ({ onClose, onOpenTags, onOpenSettings, isOpen }) => {
+  userName: string;
+}> = ({ onClose, onOpenTags, onOpenSettings, onLogout, isOpen, userName }) => {
   const [visible, setVisible] = useState(isOpen);
 
   useEffect(() => {
@@ -56,7 +74,10 @@ const Sidebar: React.FC<{
             <div className="w-10 h-10 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-md flex items-center justify-center">
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
-            <span className="font-semibold text-gray-900 text-lg">Menu</span>
+            <div>
+              <span className="font-semibold text-gray-900 text-lg block">Menu</span>
+              <span className="text-xs text-gray-500">{userName}</span>
+            </div>
           </div>
           <button
             className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
@@ -84,7 +105,7 @@ const Sidebar: React.FC<{
           >
             <Settings className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
             <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
-              Settings
+              Configurações
             </span>
           </button>
 
@@ -92,11 +113,11 @@ const Sidebar: React.FC<{
 
           <button
             className="w-full text-left flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-red-50 transition-colors group"
-            onClick={() => alert("Logged out")}
+            onClick={onLogout}
           >
             <LogOut className="w-5 h-5 text-red-500" />
             <span className="text-sm text-red-500 font-medium">
-              Log Out
+              Sair
             </span>
           </button>
         </nav>
@@ -106,7 +127,10 @@ const Sidebar: React.FC<{
 };
 
 // Painel de Configurações
-const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const SettingsPanel: React.FC<{ 
+  onClose: () => void;
+  userData: DashboardData["user"];
+}> = ({ onClose, userData }) => {
   const [showAccountInfo, setShowAccountInfo] = useState(false);
 
   if (showAccountInfo) {
@@ -129,12 +153,12 @@ const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <div className="space-y-4">
             <div className="border border-gray-200 rounded-lg p-4">
               <label className="text-sm font-medium text-gray-600 block mb-2">Nome</label>
-              <p className="text-base text-gray-900 font-medium">João Silva</p>
+              <p className="text-base text-gray-900 font-medium">{userData.name}</p>
             </div>
 
             <div className="border border-gray-200 rounded-lg p-4">
               <label className="text-sm font-medium text-gray-600 block mb-2">E-mail</label>
-              <p className="text-base text-gray-900">joao.silva@clinica.com</p>
+              <p className="text-base text-gray-900">{userData.email}</p>
             </div>
 
             <div className="border border-gray-200 rounded-lg p-4">
@@ -152,14 +176,20 @@ const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </div>
 
             <div className="border border-gray-200 rounded-lg p-4">
-              <label className="text-sm font-medium text-gray-600 block mb-2">Conta</label>
+              <label className="text-sm font-medium text-gray-600 block mb-2">Tipo de Conta</label>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-base text-gray-900 font-medium">Premium</p>
-                  <p className="text-sm text-gray-500">Ativo desde 15/01/2024</p>
+                  <p className="text-base text-gray-900 font-medium">{userData.role}</p>
+                  <p className="text-sm text-gray-500">
+                    Status: {userData.confirmed ? "Confirmado" : "Pendente"}
+                  </p>
                 </div>
-                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                  Ativo
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  userData.confirmed 
+                    ? "bg-green-100 text-green-700" 
+                    : "bg-yellow-100 text-yellow-700"
+                }`}>
+                  {userData.confirmed ? "Ativo" : "Pendente"}
                 </span>
               </div>
             </div>
@@ -224,11 +254,58 @@ const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 // Dashboard principal
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [isConnected, setIsConnected] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+
+  // Função de logout usando useCallback para evitar problemas de dependência
+  const handleLogout = useCallback(() => {
+    // Limpar localStorage
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("dashboardData");
+    
+    // Redirecionar para login
+    navigate("/");
+  }, [navigate]);
+
+  // Carregar dados do localStorage quando o componente montar
+  useEffect(() => {
+    const storedData = localStorage.getItem("dashboardData");
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        setDashboardData(parsedData);
+        console.log("Dados do dashboard carregados:", parsedData);
+      } catch (error) {
+        console.error("Erro ao parsear dados do dashboard:", error);
+        // Se houver erro, redireciona para login
+        handleLogout();
+      }
+    } else {
+      // Se não houver dados, redireciona para login
+      handleLogout();
+    }
+  }, [handleLogout]);
+
+  // Se ainda não carregou os dados, mostra loading
+  if (!dashboardData) {
+    return (
+      <div className="min-h-screen bg-[#f4f8f9] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
+          <p className="text-gray-600">Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f4f8f9] flex relative">
@@ -243,6 +320,8 @@ const Dashboard: React.FC = () => {
           setShowSettings(true);
           setShowSidebar(false);
         }}
+        onLogout={handleLogout}
+        userName={dashboardData.user.name}
       />
 
       <div className="flex-1 flex flex-col">
@@ -268,6 +347,13 @@ const Dashboard: React.FC = () => {
                   Sistema de Gestão de Conversas
                 </p>
               </div>
+            </div>
+
+            <div className="ml-auto flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs font-medium text-green-700">
+                {dashboardData.user.name}
+              </span>
             </div>
           </div>
         </header>
@@ -312,7 +398,12 @@ const Dashboard: React.FC = () => {
           />
         )}
         {showTagManager && <TagManager onClose={() => setShowTagManager(false)} />}
-        {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+        {showSettings && (
+          <SettingsPanel 
+            onClose={() => setShowSettings(false)}
+            userData={dashboardData.user}
+          />
+        )}
       </div>
     </div>
   );
