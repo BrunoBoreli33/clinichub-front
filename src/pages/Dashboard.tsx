@@ -278,21 +278,46 @@ const Dashboard: React.FC = () => {
 
   // Carregar dados do localStorage quando o componente montar
   useEffect(() => {
-    const storedData = localStorage.getItem("dashboardData");
-    if (storedData) {
-      try {
-        const parsedData = JSON.parse(storedData);
-        setDashboardData(parsedData);
-        console.log("Dados do dashboard carregados:", parsedData);
-      } catch (error) {
-        console.error("Erro ao parsear dados do dashboard:", error);
-        // Se houver erro, redireciona para login
+  const validateSession = async () => {
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+    
+    if (!token || !userId) {
+      handleLogout();
+      return;
+    }
+
+    try {
+      // Faz uma chamada ao backend para validar o token
+      const response = await fetch(
+        `http://localhost:8081/dashboard?userId=${userId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data);
+        // Atualiza o localStorage com dados frescos do backend
+        localStorage.setItem("dashboardData", JSON.stringify(data));
+        console.log("Dados do dashboard carregados:", data);
+      } else {
+        // Token inválido ou expirado
+        console.error("Sessão inválida");
         handleLogout();
       }
-    } else {
-      // Se não houver dados, redireciona para login
-      handleLogout();
-    }
+      } catch (error) {
+        console.error("Erro ao validar sessão:", error);
+        handleLogout();
+      }
+    };
+
+    validateSession();
   }, [handleLogout]);
 
   // Se ainda não carregou os dados, mostra loading
