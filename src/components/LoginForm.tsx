@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Shield, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
+import { buildUrl } from "@/lib/api";
 import clinicHero from "@/assets/clinic-hero.jpg";
 
 const LoginForm = () => {
@@ -32,7 +33,7 @@ const LoginForm = () => {
 
     try {
       // PASSO 1: Fazer login e obter token
-      const loginResponse = await fetch("http://localhost:8081/auth/login", {
+  const loginResponse = await fetch(buildUrl('/auth/login'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -76,7 +77,7 @@ const LoginForm = () => {
 
       // PASSO 2: Buscar dados do dashboard com o token
       const dashboardResponse = await fetch(
-        `http://localhost:8081/dashboard?userId=${id}`,
+        buildUrl(`/dashboard?userId=${id}`),
         {
           method: "GET",
           headers: {

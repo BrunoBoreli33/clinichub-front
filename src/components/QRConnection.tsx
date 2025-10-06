@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { QrCode, CheckCircle, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { buildUrl } from "@/lib/api";
 
 interface QRConnectionProps {
   onClose: () => void;
@@ -32,7 +33,7 @@ const QRConnection = ({ onClose, onConnected }: QRConnectionProps) => {
 
     try {
       setIsLoading(true);
-      const response = await fetch("http://localhost:8081/dashboard/zapi/qr-code", {
+  const response = await fetch(buildUrl('/dashboard/zapi/qr-code'), {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,

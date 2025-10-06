@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Mail, Lock, User, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { buildUrl } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
 import clinicHero from "@/assets/clinic-hero.jpg";
 
@@ -49,7 +50,7 @@ const SignupForm = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8081/auth/register", {
+  const response = await fetch(buildUrl('/auth/register'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
 import ChatColumns from "@/components/ChatColumns";
 import TagManager from "@/components/TagManager";
+import { buildUrl } from "@/lib/api";
 
 // Interface para tipar os dados do dashboard
 interface DashboardData {
@@ -290,7 +291,7 @@ const Dashboard: React.FC = () => {
     try {
       // Faz uma chamada ao backend para validar o token
       const response = await fetch(
-        `http://localhost:8081/dashboard?userId=${userId}`,
+        buildUrl(`/dashboard?userId=${userId}`),
         {
           method: "GET",
           headers: {

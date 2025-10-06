@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Shield, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useLocation, Link } from "react-router-dom";
+import { buildUrl } from "@/lib/api";
 import clinicHero from "@/assets/clinic-hero.jpg";
 
 interface LocationState {
@@ -37,7 +38,7 @@ const ConfirmForm = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8081/auth/confirm", {
+  const response = await fetch(buildUrl('/auth/confirm'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
