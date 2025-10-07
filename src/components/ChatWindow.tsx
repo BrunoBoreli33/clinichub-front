@@ -4,7 +4,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { X, Send, Mic, Play, Pause } from "lucide-react";
-import { Chat, Message } from "./ChatColumns";
+
+// Interfaces locais
+interface Message {
+  id: string;
+  content: string;
+  timestamp: string;
+  sender: "user" | "client";
+  type: "text" | "audio";
+  duration?: number;
+}
+
+interface Chat {
+  id: string;
+  name: string;
+  phone: string;
+  lastMessageTime: string | null;
+  isGroup: boolean;
+  unread: number;
+  profileThumbnail: string | null;
+  column: string;
+  ticket: { tag?: string } | null;
+}
 
 interface ChatWindowProps {
   chat: Chat;
@@ -13,7 +34,7 @@ interface ChatWindowProps {
 
 const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
   const [newMessage, setNewMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>(chat.messages);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [audioSpeed, setAudioSpeed] = useState<1 | 2>(1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -21,6 +42,20 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    // Carregar mensagens do chat (mock inicial)
+    const initialMessages: Message[] = [
+      {
+        id: "1",
+        content: "Olá! Como posso ajudar?",
+        timestamp: "10:30",
+        sender: "client",
+        type: "text"
+      }
+    ];
+    setMessages(initialMessages);
+  }, [chat.id]);
 
   const sendMessage = () => {
     if (!newMessage.trim()) return;
@@ -63,66 +98,79 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
     return timestamp;
   };
 
+  const getInitials = (name: string) => {
+    if (!name) return "?";
+    return name.substring(0, 2).toUpperCase();
+  };
+
   return (
-    <Card className="h-full bg-white border-0 shadow-medical flex flex-col">
+    <Card className="h-full bg-white border-0 shadow-2xl rounded-2xl flex flex-col overflow-hidden">
       {/* Header do Chat */}
-      <CardHeader className="pb-3 border-b border-border bg-gradient-to-r from-emerald-50 to-emerald-100">
+      <CardHeader className="pb-4 pt-5 px-6 border-b border-gray-100 bg-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-medium">
-              {chat.avatar}
-            </div>
+            {chat.profileThumbnail ? (
+              <img 
+                src={chat.profileThumbnail} 
+                alt={chat.name}
+                className="w-12 h-12 rounded-full object-cover ring-2 ring-green-100"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-sm font-semibold ring-2 ring-green-100">
+                {getInitials(chat.name)}
+              </div>
+            )}
             <div>
-              <h3 className="font-semibold text-foreground">{chat.name}</h3>
-              <p className="text-xs text-emerald-600">Online</p>
+              <h3 className="font-semibold text-gray-900 text-base">{chat.name}</h3>
+              <p className="text-xs text-gray-500">{chat.phone}</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {chat.tag && (
+            {chat.ticket?.tag && (
               <Badge 
                 variant="outline"
-                className="text-xs"
-                style={{ 
-                  borderColor: chat.tag.color, 
-                  color: chat.tag.color,
-                  backgroundColor: `${chat.tag.color}10`
-                }}
+                className="text-xs px-3 py-1 bg-green-50 text-green-700 border-green-200"
               >
-                {chat.tag.name}
+                {chat.ticket.tag}
               </Badge>
             )}
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onClose}
+              className="hover:bg-gray-100 rounded-full h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4 text-gray-500" />
             </Button>
           </div>
         </div>
       </CardHeader>
 
       {/* Mensagens */}
-      <CardContent className="flex-1 p-0 overflow-hidden">
+      <CardContent className="flex-1 p-0 overflow-hidden bg-gray-50">
         <div className="h-full flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-6 space-y-3">
             {messages.map(message => (
               <div
                 key={message.id}
                 className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-xs px-3 py-2 rounded-lg ${
+                  className={`max-w-[70%] px-4 py-2.5 rounded-2xl shadow-sm ${
                     message.sender === "user"
-                      ? "bg-emerald-500 text-white"
-                      : "bg-gray-100 text-gray-800"
+                      ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-br-md"
+                      : "bg-white text-gray-800 border border-gray-100 rounded-bl-md"
                   }`}
                 >
                   {message.type === "text" ? (
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-sm leading-relaxed">{message.content}</p>
                   ) : (
                     <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 hover:bg-white/20"
                         onClick={() => toggleAudio(message.id)}
                       >
                         {playingAudio === message.id ? (
@@ -135,15 +183,15 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-2 text-xs"
+                        className="h-6 px-2 text-xs hover:bg-white/20"
                         onClick={() => setAudioSpeed(audioSpeed === 1 ? 2 : 1)}
                       >
                         {audioSpeed}x
                       </Button>
                     </div>
                   )}
-                  <p className={`text-xs mt-1 ${
-                    message.sender === "user" ? "text-emerald-100" : "text-gray-500"
+                  <p className={`text-[10px] mt-1 ${
+                    message.sender === "user" ? "text-green-100" : "text-gray-400"
                   }`}>
                     {formatTime(message.timestamp)}
                   </p>
@@ -154,26 +202,26 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
           </div>
 
           {/* Input de Mensagem */}
-          <div className="p-4 border-t border-border bg-gray-50">
-            <div className="flex gap-2">
+          <div className="p-4 border-t border-gray-200 bg-white">
+            <div className="flex gap-2 items-center">
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Digite uma mensagem..."
                 onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                className="flex-1 bg-white"
+                className="flex-1 bg-gray-50 border-gray-200 rounded-full px-4 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-500 hover:text-primary"
+                className="text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full h-10 w-10 p-0"
               >
-                <Mic className="h-4 w-4" />
+                <Mic className="h-5 w-5" />
               </Button>
               <Button
                 onClick={sendMessage}
                 disabled={!newMessage.trim()}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full h-10 w-10 p-0 disabled:opacity-50"
               >
                 <Send className="h-4 w-4" />
               </Button>

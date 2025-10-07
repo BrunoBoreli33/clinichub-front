@@ -1,15 +1,40 @@
 import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { QrCode, CheckCircle, Loader2, RefreshCw, AlertCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { CheckCircle2, RefreshCw, AlertCircle } from "lucide-react";
+
+// Interface para os dados dos chats
+interface ChatsData {
+  success: boolean;
+  message: string;
+  totalChats: number;
+  unreadCount: number;
+  chats: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    lastMessageTime: string | null;
+    isGroup: boolean;
+    unread: number;
+    profileThumbnail: string | null;
+    column: string;
+    ticket: { tag?: string } | null;
+  }>;
+}
 
 interface QRConnectionProps {
   onClose: () => void;
-  onConnected: () => void;
+  onConnected: (chatsData: ChatsData | null) => void;
+  showToast: (toast: { message: string; description?: string; variant?: string }) => void;
 }
 
-const QRConnection = ({ onClose, onConnected }: QRConnectionProps) => {
+const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) => {
   const [step, setStep] = useState<"qr" | "success" | "error">("qr");
   const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,11 +42,10 @@ const QRConnection = ({ onClose, onConnected }: QRConnectionProps) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [canRetry, setCanRetry] = useState(false);
 
-  const { toast } = useToast();
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const attemptsRef = useRef(0);
 
-  // Função para buscar QR Code ou verificar se já está conectado
+  // MÉTODO MODIFICADO: Agora inicia o carregamento quando detecta conexão
   const fetchQRCode = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -42,17 +66,41 @@ const QRConnection = ({ onClose, onConnected }: QRConnectionProps) => {
 
       const data = await response.json();
 
-      // Se já estiver conectado, vai direto para os chats
+      // MODIFICADO: Se já estiver conectado, inicia carregamento de chats
       if (data.connected) {
         setStep("success");
         stopPolling();
         setQrCodeImage(null);
-        setTimeout(() => {
-          onConnected();
-          toast({
-            title: "WhatsApp conectado com sucesso!",
-            description: "Suas conversas serão carregadas em breve.",
-          });
+        
+        // MODIFICADO: Buscar chats e retornar para mostrar tela de carregamento
+        setTimeout(async () => {
+          try {
+            const chatsResponse = await fetch("http://localhost:8081/dashboard/zapi/chats_info", {
+              method: "GET",
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+            
+            const chatsData = await chatsResponse.json();
+            
+            // MODIFICADO: Passa os dados para o Dashboard mostrar a tela de carregamento
+            onConnected(chatsData);
+            
+            showToast({
+              message: "WhatsApp conectado!",
+              description: "Carregando suas conversas...",
+            });
+          } catch (error) {
+            console.error("Erro ao carregar chats:", error);
+            onConnected(null);
+            showToast({
+              message: "Conectado com aviso",
+              description: "WhatsApp conectado, mas houve erro ao carregar conversas.",
+              variant: "destructive",
+            });
+          }
         }, 500);
         return;
       }
@@ -102,8 +150,8 @@ const QRConnection = ({ onClose, onConnected }: QRConnectionProps) => {
       if (attemptsRef.current >= 3) {
         stopPolling();
         setCanRetry(true);
-        toast({
-          title: "QR Code expirado",
+        showToast({
+          message: "QR Code expirado",
           description: "Por favor, solicite um novo QR Code.",
           variant: "destructive",
         });
@@ -129,6 +177,7 @@ const QRConnection = ({ onClose, onConnected }: QRConnectionProps) => {
   useEffect(() => {
     startPolling();
     return () => stopPolling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -140,81 +189,89 @@ const QRConnection = ({ onClose, onConnected }: QRConnectionProps) => {
             {step === "success" && "Conectado com Sucesso!"}
             {step === "error" && "Erro na Conexão"}
           </DialogTitle>
+          <DialogDescription className="text-center">
+            {step === "qr" && "Escaneie o código QR com seu WhatsApp"}
+            {step === "success" && "Seu WhatsApp foi conectado com sucesso"}
+            {step === "error" && errorMessage}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center space-y-6 py-6">
+        <div className="flex flex-col items-center gap-4 py-4">
           {step === "qr" && (
             <>
-              <div className="w-48 h-48 bg-white border-2 border-border rounded-lg flex items-center justify-center overflow-hidden">
-                {isLoading && !qrCodeImage ? (
-                  <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                ) : qrCodeImage ? (
-                  <img src={qrCodeImage} alt="QR Code WhatsApp" className="w-full h-full object-contain p-2" />
-                ) : (
-                  <div className="w-40 h-40 bg-foreground/10 rounded-lg flex items-center justify-center">
-                    <QrCode className="w-20 h-20 text-foreground/30" />
+              {isLoading ? (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
+                  <p className="text-sm text-gray-600">Gerando QR Code...</p>
+                </div>
+              ) : qrCodeImage ? (
+                <>
+                  <div className="p-4 bg-white rounded-lg shadow-sm">
+                    <img
+                      src={qrCodeImage}
+                      alt="QR Code WhatsApp"
+                      className="w-64 h-64 object-contain"
+                    />
                   </div>
-                )}
-              </div>
-
-              <div className="text-center space-y-2">
-                <p className="font-medium">Escaneie o código QR</p>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  Abra o WhatsApp Business no seu celular e escaneie este código para conectar
-                </p>
-                {attempts > 0 && (
-                  <p className="text-xs text-orange-600 font-medium">
-                    Tentativa {attempts} de 3
-                  </p>
-                )}
-              </div>
-
-              {canRetry && (
-                <Button onClick={handleRetry} className="bg-gradient-primary text-white hover:shadow-medical">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Gerar Novo QR Code
-                </Button>
-              )}
+                  <div className="text-center space-y-2">
+                    <p className="text-sm text-gray-600">
+                      Abra o WhatsApp no seu celular
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Toque em Mais opções → Aparelhos conectados → Conectar
+                      aparelho
+                    </p>
+                    {attempts > 0 && (
+                      <p className="text-xs text-orange-600">
+                        Tentativa {attempts} de 3
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : null}
             </>
           )}
 
           {step === "success" && (
-            <>
-              <div className="w-48 h-48 flex items-center justify-center">
-                <div className="w-24 h-24 bg-accent/10 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-16 h-16 text-accent" />
-                </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-4 bg-green-50 rounded-full">
+                <CheckCircle2 className="w-16 h-16 text-green-500" />
               </div>
-              <div className="text-center space-y-2">
-                <p className="font-medium text-accent">Conectado com Sucesso!</p>
-                <p className="text-sm text-muted-foreground">Redirecionando para o painel de conversas...</p>
-              </div>
-            </>
+              <p className="text-center text-gray-600">
+                Preparando suas conversas...
+              </p>
+            </div>
           )}
 
           {step === "error" && (
-            <>
-              <div className="w-48 h-48 flex items-center justify-center">
-                <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-16 h-16 text-red-500" />
-                </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="p-4 bg-red-50 rounded-full">
+                <AlertCircle className="w-16 h-16 text-red-500" />
               </div>
-              <div className="text-center space-y-2">
-                <p className="font-medium text-red-600">Erro na Conexão</p>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  {errorMessage || "Não foi possível conectar ao WhatsApp Business"}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleRetry} className="bg-gradient-primary text-white hover:shadow-medical">
+              {canRetry && (
+                <Button
+                  onClick={handleRetry}
+                  className="bg-green-600 hover:bg-green-700"
+                >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Tentar Novamente
                 </Button>
-                <Button onClick={onClose} variant="outline">Fechar</Button>
-              </div>
-            </>
+              )}
+            </div>
           )}
         </div>
+
+        {step !== "success" && (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="w-full"
+            >
+              Cancelar
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

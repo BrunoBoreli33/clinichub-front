@@ -10,6 +10,7 @@ import Signup from "./pages/Signup";
 import ConfirmForm from "@/components/ConfirmForm";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminPanel from "./pages/AdminPanel"; // ← NOVA IMPORTAÇÃO
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,16 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* ← NOVA ROTA - Painel Admin (apenas para ADMIN) */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminPanel />
               </ProtectedRoute>
             } 
           />

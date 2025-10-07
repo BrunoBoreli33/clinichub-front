@@ -16,6 +16,8 @@ import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
 import ChatColumns from "@/components/ChatColumns";
 import TagManager from "@/components/TagManager";
+import Toast from "@/components/Toast";
+import LoadingChats from "./LoadingChats"; // ← NOVA LINHA: Import do componente de carregamento
 
 // Interface para tipar os dados do dashboard
 interface DashboardData {
@@ -26,10 +28,25 @@ interface DashboardData {
     role: string;
     confirmed: boolean;
   };
-  // Adicione aqui outras propriedades conforme você adicionar no backend
-  // messages?: Array<any>;
-  // contacts?: Array<any>;
-  // conversations?: Array<any>;
+}
+
+// Adicione esta interface após os imports
+interface ChatsData {
+  success: boolean;
+  message: string;
+  totalChats: number;
+  unreadCount: number;
+  chats: {
+    id: string;
+    name: string;
+    phone: string;
+    lastMessageTime: string | null;
+    isGroup: boolean;
+    unread: number;
+    profileThumbnail: string | null;
+    column: string;
+    ticket: { tag?: string } | null;
+  }[];
 }
 
 // Sidebar com animação e overlay sincronizado
@@ -261,6 +278,16 @@ const Dashboard: React.FC = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [chatsData, setChatsData] = useState<ChatsData | null>(null);
+  const [toast, setToast] = useState<{ message: string; description?: string; variant?: string } | null>(null);
+  
+  // ← NOVAS LINHAS: Estados para controlar a tela de carregamento
+  const [showLoadingChats, setShowLoadingChats] = useState(false);
+  const [totalChatsForLoading, setTotalChatsForLoading] = useState(0);
+
+  const showToast = ({ message, description, variant = "default" }: { message: string; description?: string; variant?: string }) => {
+    setToast({ message, description, variant });
+  };
 
   // Função de logout usando useCallback para evitar problemas de dependência
   const handleLogout = useCallback(() => {
@@ -278,39 +305,39 @@ const Dashboard: React.FC = () => {
 
   // Carregar dados do localStorage quando o componente montar
   useEffect(() => {
-  const validateSession = async () => {
-    const token = localStorage.getItem("token");
-    const userId = localStorage.getItem("userId");
-    
-    if (!token || !userId) {
-      handleLogout();
-      return;
-    }
-
-    try {
-      // Faz uma chamada ao backend para validar o token
-      const response = await fetch(
-        `http://localhost:8081/dashboard?userId=${userId}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setDashboardData(data);
-        // Atualiza o localStorage com dados frescos do backend
-        localStorage.setItem("dashboardData", JSON.stringify(data));
-        console.log("Dados do dashboard carregados:", data);
-      } else {
-        // Token inválido ou expirado
-        console.error("Sessão inválida");
+    const validateSession = async () => {
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+      
+      if (!token || !userId) {
         handleLogout();
+        return;
       }
+
+      try {
+        // Faz uma chamada ao backend para validar o token
+        const response = await fetch(
+          `http://localhost:8081/dashboard?userId=${userId}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setDashboardData(data);
+          // Atualiza o localStorage com dados frescos do backend
+          localStorage.setItem("dashboardData", JSON.stringify(data));
+          console.log("Dados do dashboard carregados:", data);
+        } else {
+          // Token inválido ou expirado
+          console.error("Sessão inválida");
+          handleLogout();
+        }
       } catch (error) {
         console.error("Erro ao validar sessão:", error);
         handleLogout();
@@ -319,6 +346,76 @@ const Dashboard: React.FC = () => {
 
     validateSession();
   }, [handleLogout]);
+
+  // ← MODIFICADO: Agora mostra a tela de carregamento quando há chats
+  const handleConnected = (data: ChatsData | null) => {
+    setIsConnected(true);
+    setShowQR(false);
+    
+    if (data && data.totalChats > 0) {
+      // NOVA LÓGICA: Mostrar tela de carregamento
+      setTotalChatsForLoading(data.totalChats);
+      setShowLoadingChats(true);
+    } else {
+      // Se não houver chats, vai direto
+      setChatsData(data);
+    }
+  };
+
+  // ← NOVO MÉTODO: Callback quando o carregamento completa
+  const handleLoadingComplete = (data: ChatsData | null) => {
+    setShowLoadingChats(false);
+    setChatsData(data);
+    
+    showToast({
+      message: "Chats carregados com sucesso!",
+      description: `${data?.totalChats || 0} conversas prontas para visualização.`,
+    });
+  };
+
+  // ← MODIFICADO: Verificar conexão e auto-conectar ao carregar a página
+  useEffect(() => {
+    const checkExistingConnection = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const response = await fetch("http://localhost:8081/dashboard/zapi/status", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await response.json();
+        
+        if (data.connected) {
+          setIsConnected(true);
+        }
+        
+        // NOVA FUNCIONALIDADE: Auto-clicar em "Conectar Agora"
+        // Abre o modal QR automaticamente se não tiver chats carregados
+        if (!chatsData) {
+          setTimeout(() => {
+            setShowQR(true);
+          }, 500); // Pequeno delay para garantir que a UI carregou
+        }
+      } catch (error) {
+        console.error("Erro ao verificar conexão:", error);
+        // Mesmo com erro, tenta abrir o modal QR
+        if (!chatsData) {
+          setTimeout(() => {
+            setShowQR(true);
+          }, 500);
+        }
+      }
+    };
+
+    if (dashboardData) {
+      checkExistingConnection();
+    }
+  }, [dashboardData, chatsData]);
 
   // Se ainda não carregou os dados, mostra loading
   if (!dashboardData) {
@@ -329,6 +426,16 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600">Carregando dados...</p>
         </div>
       </div>
+    );
+  }
+
+  // ← NOVA CONDIÇÃO: Exibir tela de carregamento
+  if (showLoadingChats) {
+    return (
+      <LoadingChats 
+        onLoadingComplete={handleLoadingComplete}
+        totalChats={totalChatsForLoading}
+      />
     );
   }
 
@@ -384,7 +491,7 @@ const Dashboard: React.FC = () => {
         </header>
 
         <main className="flex-1 flex items-start justify-center p-4 pt-8">
-          {!isConnected ? (
+          {!isConnected || !chatsData ? (
             <Card className="shadow-md max-w-sm w-full rounded-lg">
               <CardHeader className="text-center pt-8">
                 <div className="p-6 bg-[#edf2f3] rounded-full w-fit mx-auto mb-4">
@@ -409,17 +516,15 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <ChatColumns />
+            <ChatColumns chatsData={chatsData} />
           )}
         </main>
 
         {showQR && (
           <QRConnection
             onClose={() => setShowQR(false)}
-            onConnected={() => {
-              setIsConnected(true);
-              setShowQR(false);
-            }}
+            onConnected={handleConnected}
+            showToast={showToast}
           />
         )}
         {showTagManager && <TagManager onClose={() => setShowTagManager(false)} />}
@@ -427,6 +532,14 @@ const Dashboard: React.FC = () => {
           <SettingsPanel 
             onClose={() => setShowSettings(false)}
             userData={dashboardData.user}
+          />
+        )}
+        {toast && (
+          <Toast
+            message={toast.message}
+            description={toast.description}
+            variant={toast.variant as "default" | "destructive"}
+            onClose={() => setToast(null)}
           />
         )}
       </div>
