@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Tag, MoveRight, MessageCircle, ArrowUpDown, Settings } from "lucide-react";
+import { MoreVertical, Tag, MoveRight, MessageCircle, ArrowUpDown, Settings, Move } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 
 // Interfaces
@@ -33,7 +34,6 @@ interface ChatsData {
   chats: Chat[];
 }
 
-// ← MODIFICADO: Adicionada prop showToast
 interface ChatColumnsProps {
   chatsData?: ChatsData | null;
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
@@ -211,152 +211,179 @@ const ChatColumn = ({ id, title, color, chats, onChatSelect, onMoveChat, onUpdat
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 p-0 overflow-hidden">
-        <div className="space-y-1 h-full overflow-y-auto px-4 pb-4">
-          {chats.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-              <MessageCircle className="w-8 h-8 mb-2 opacity-30" />
-              <p className="text-xs">Nenhuma conversa</p>
-            </div>
-          ) : (
-            sortedChats.map(chat => (
-              <div
-                key={chat.id}
-                className="group p-3 rounded-lg bg-white/50 hover:bg-white/80 cursor-pointer transition-all duration-200 hover:shadow-card border border-white/20"
-              >
-                <div className="flex items-start justify-between">
-                  <div 
-                    className="flex-1 min-w-0"
-                    onClick={() => onChatSelect(chat)}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="relative">
-                        {chat.profileThumbnail ? (
-                          <img 
-                            src={chat.profileThumbnail} 
-                            alt={chat.name}
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-medium">
-                            {getInitials(chat.name)}
-                          </div>
-                        )}
-                        {chat.unread > 0 && (
-                          <Badge 
-                            variant="secondary" 
-                            className="absolute -top-1 -right-1 bg-primary text-white text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center"
-                          >
-                            {chat.unread}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-medium text-foreground truncate">
-                            {chat.name || chat.phone}
-                          </h4>
-                          <span className="text-xs text-muted-foreground">
-                            {formatTime(chat.lastMessageTime)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {chat.phone}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {chat.isGroup && (
-                        <Badge variant="outline" className="text-xs">
-                          Grupo
-                        </Badge>
-                      )}
-                      
-                      {chat.ticket?.tag && (
-                        <Badge 
-                          variant="outline" 
-                          className="text-xs"
-                          style={{ 
-                            borderColor: availableTags.find(t => t.name === chat.ticket?.tag)?.color || "#666",
-                            color: availableTags.find(t => t.name === chat.ticket?.tag)?.color || "#666",
-                            backgroundColor: `${availableTags.find(t => t.name === chat.ticket?.tag)?.color || "#666"}10`
-                          }}
-                        >
-                          {chat.ticket.tag}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                      >
-                        <MoreVertical className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem className="text-xs font-medium text-muted-foreground cursor-default">
-                        <Tag className="mr-2 h-3 w-3" />
-                        Alterar Etiqueta
-                      </DropdownMenuItem>
-                      
-                      {availableTags.map(tag => (
-                        <DropdownMenuItem 
-                          key={tag.id}
-                          onClick={() => onUpdateTag(chat.id, id, tag)}
-                          className="text-xs pl-6"
-                        >
-                          <div 
-                            className="w-2 h-2 rounded-full mr-2"
-                            style={{ backgroundColor: tag.color }}
-                          />
-                          {tag.name}
-                        </DropdownMenuItem>
-                      ))}
-                      
-                      <DropdownMenuItem 
-                        onClick={() => onUpdateTag(chat.id, id, undefined)}
-                        className="text-xs pl-6 text-muted-foreground"
-                      >
-                        Remover etiqueta
-                      </DropdownMenuItem>
-                      
-                      <DropdownMenuSeparator />
-                      
-                      <DropdownMenuItem className="text-xs font-medium text-muted-foreground cursor-default">
-                        <MoveRight className="mr-2 h-3 w-3" />
-                        Mover para Coluna
-                      </DropdownMenuItem>
-                      
-                      {columnsConfig.filter(col => col.id !== id).map(column => (
-                        <DropdownMenuItem 
-                          key={column.id}
-                          onClick={() => onMoveChat(chat.id, id, column.id)}
-                          className="text-xs pl-6"
-                        >
-                          {column.title}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+      {/* DROPPABLE AREA */}
+      <Droppable droppableId={id}>
+        {(provided, snapshot) => (
+          <CardContent 
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={`flex-1 p-0 overflow-hidden transition-colors ${
+              snapshot.isDraggingOver ? 'bg-green-50/50' : ''
+            }`}
+          >
+            <div className="space-y-1 h-full overflow-y-auto px-4 pb-4">
+              {chats.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+                  <MessageCircle className="w-8 h-8 mb-2 opacity-30" />
+                  <p className="text-xs">Nenhuma conversa</p>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      </CardContent>
+              ) : (
+                sortedChats.map((chat, index) => (
+                  <Draggable key={chat.id} draggableId={chat.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={`group relative p-3 rounded-lg bg-white/50 hover:bg-white/80 cursor-pointer transition-all duration-200 border border-white/20 ${
+                          snapshot.isDragging ? 'shadow-lg ring-2 ring-green-400' : 'hover:shadow-card'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div 
+                            className="flex-1 min-w-0"
+                            onClick={() => onChatSelect(chat)}
+                          >
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="relative">
+                                {chat.profileThumbnail ? (
+                                  <img 
+                                    src={chat.profileThumbnail} 
+                                    alt={chat.name}
+                                    className="w-10 h-10 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-medium">
+                                    {getInitials(chat.name)}
+                                  </div>
+                                )}
+                                {chat.unread > 0 && (
+                                  <Badge 
+                                    variant="secondary" 
+                                    className="absolute -top-1 -right-1 bg-primary text-white text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center"
+                                  >
+                                    {chat.unread}
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-sm font-medium text-foreground truncate">
+                                    {chat.name || chat.phone}
+                                  </h4>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatTime(chat.lastMessageTime)}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {chat.phone}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              {chat.isGroup && (
+                                <Badge variant="outline" className="text-xs">
+                                  Grupo
+                                </Badge>
+                              )}
+                              
+                              {chat.ticket?.tag && (
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  style={{ 
+                                    borderColor: availableTags.find(t => t.name === chat.ticket?.tag)?.color || "#666",
+                                    color: availableTags.find(t => t.name === chat.ticket?.tag)?.color || "#666",
+                                    backgroundColor: `${availableTags.find(t => t.name === chat.ticket?.tag)?.color || "#666"}10`
+                                  }}
+                                >
+                                  {chat.ticket.tag}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                              >
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem className="text-xs font-medium text-muted-foreground cursor-default">
+                                <Tag className="mr-2 h-3 w-3" />
+                                Alterar Etiqueta
+                              </DropdownMenuItem>
+                              
+                              {availableTags.map(tag => (
+                                <DropdownMenuItem 
+                                  key={tag.id}
+                                  onClick={() => onUpdateTag(chat.id, id, tag)}
+                                  className="text-xs pl-6"
+                                >
+                                  <div 
+                                    className="w-2 h-2 rounded-full mr-2"
+                                    style={{ backgroundColor: tag.color }}
+                                  />
+                                  {tag.name}
+                                </DropdownMenuItem>
+                              ))}
+                              
+                              <DropdownMenuItem 
+                                onClick={() => onUpdateTag(chat.id, id, undefined)}
+                                className="text-xs pl-6 text-muted-foreground"
+                              >
+                                Remover etiqueta
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuSeparator />
+                              
+                              <DropdownMenuItem className="text-xs font-medium text-muted-foreground cursor-default">
+                                <MoveRight className="mr-2 h-3 w-3" />
+                                Mover para Coluna
+                              </DropdownMenuItem>
+                              
+                              {columnsConfig.filter(col => col.id !== id).map(column => (
+                                <DropdownMenuItem 
+                                  key={column.id}
+                                  onClick={() => onMoveChat(chat.id, id, column.id)}
+                                  className="text-xs pl-6"
+                                >
+                                  {column.title}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {/* ÍCONE DE ARRASTAR - CANTO INFERIOR DIREITO */}
+                        <div
+                          {...provided.dragHandleProps}
+                          className="absolute bottom-1 right-1 p-1 opacity-0 group-hover:opacity-60 hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Move className="w-3.5 h-3.5 text-gray-400" />
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))
+              )}
+              {provided.placeholder}
+            </div>
+          </CardContent>
+        )}
+      </Droppable>
     </Card>
   );
 };
 
 // Componente principal ChatColumns
-// ← MODIFICADO: Adicionado showToast na desestruturação
 const ChatColumns = ({ chatsData, showToast }: ChatColumnsProps) => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Record<string, Chat[]>>({
@@ -396,7 +423,7 @@ const ChatColumns = ({ chatsData, showToast }: ChatColumnsProps) => {
     }
   }, [chatsData]);
 
-  // ← MÉTODO COMPLETAMENTE MODIFICADO: Backend-first
+  // Função para mover chat (backend-first)
   const moveChat = async (chatId: string, fromColumn: string, toColumn: string) => {
     const chat = chats[fromColumn]?.find(c => c.id === chatId);
     if (!chat) return;
@@ -423,7 +450,7 @@ const ChatColumns = ({ chatsData, showToast }: ChatColumnsProps) => {
     }
 
     try {
-      // PASSO 1: Fazer requisição ao backend PRIMEIRO
+      // Fazer requisição ao backend PRIMEIRO
       const response = await fetch(`http://localhost:8081/dashboard/zapi/chats/${chatId}/column`, {
         method: "PUT",
         headers: {
@@ -435,9 +462,9 @@ const ChatColumns = ({ chatsData, showToast }: ChatColumnsProps) => {
 
       const data = await response.json();
 
-      // PASSO 2: Verificar se a requisição foi bem-sucedida
+      // Verificar se a requisição foi bem-sucedida
       if (response.ok && data.success) {
-        // PASSO 3: Atualizar estado local SOMENTE se o backend confirmou
+        // Atualizar estado local SOMENTE se o backend confirmou
         setChats(prev => ({
           ...prev,
           [fromColumn]: prev[fromColumn].filter(c => c.id !== chatId),
@@ -462,9 +489,25 @@ const ChatColumns = ({ chatsData, showToast }: ChatColumnsProps) => {
         description: error instanceof Error ? error.message : "Não foi possível mover o chat. Tente novamente.",
         variant: "destructive"
       });
-
-      // O estado local NÃO foi alterado, então o chat permanece na coluna original
     }
+  };
+
+  // HANDLER PARA DRAG AND DROP - APENAS MOVER ENTRE COLUNAS
+  const handleDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+
+    // Se não há destino (soltou fora), não faz nada
+    if (!destination) return;
+
+    const fromColumn = source.droppableId;
+    const toColumn = destination.droppableId;
+    const chatId = draggableId;
+
+    // APENAS mover entre colunas DIFERENTES (não reordena na mesma coluna)
+    if (fromColumn !== toColumn) {
+      moveChat(chatId, fromColumn, toColumn);
+    }
+    // Se soltou na mesma coluna, não faz nada (mantém ordenação por horário)
   };
 
   const updateChatTag = (chatId: string, columnId: string, tag: Tag | undefined) => {
@@ -477,7 +520,7 @@ const ChatColumns = ({ chatsData, showToast }: ChatColumnsProps) => {
       )
     }));
 
-    // TODO: Fazer requisição para o backend atualizar a tag do chat
+    // Fazer requisição para o backend atualizar a tag do chat
     const token = localStorage.getItem("token");
     if (token) {
       fetch(`http://localhost:8081/dashboard/zapi/chat/${chatId}/tag`, {
@@ -504,41 +547,43 @@ const ChatColumns = ({ chatsData, showToast }: ChatColumnsProps) => {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-120px)] justify-center">
-      {/* Colunas de Chat */}
-      <div className="flex gap-4 justify-center">
-        {columnsConfig.map(column => (
-          <ChatColumn
-            key={column.id}
-            id={column.id}
-            title={column.title}
-            color={column.color}
-            chats={chats[column.id] || []}
-            onChatSelect={setSelectedChat}
-            onMoveChat={moveChat}
-            onUpdateTag={updateChatTag}
-          />
-        ))}
-      </div>
-
-      {/* Janela de Chat - Centralizada com Overlay */}
-      {selectedChat && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setSelectedChat(null)}
-        >
-          <div 
-            className="w-full max-w-2xl h-[80vh] mx-4 animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ChatWindow
-              chat={selectedChat}
-              onClose={() => setSelectedChat(null)}
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <div className="flex gap-4 h-[calc(100vh-120px)] justify-center">
+        {/* Colunas de Chat */}
+        <div className="flex gap-4 justify-center">
+          {columnsConfig.map(column => (
+            <ChatColumn
+              key={column.id}
+              id={column.id}
+              title={column.title}
+              color={column.color}
+              chats={chats[column.id] || []}
+              onChatSelect={setSelectedChat}
+              onMoveChat={moveChat}
+              onUpdateTag={updateChatTag}
             />
-          </div>
+          ))}
         </div>
-      )}
-    </div>
+
+        {/* Janela de Chat - Centralizada com Overlay */}
+        {selectedChat && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setSelectedChat(null)}
+          >
+            <div 
+              className="w-full max-w-2xl h-[80vh] mx-4 animate-in fade-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ChatWindow
+                chat={selectedChat}
+                onClose={() => setSelectedChat(null)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </DragDropContext>
   );
 };
 
