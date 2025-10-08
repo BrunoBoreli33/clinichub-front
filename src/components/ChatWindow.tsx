@@ -5,7 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { X, Send, Mic, Play, Pause } from "lucide-react";
 
-// Interfaces locais
+// ✅ CORRIGIDO: Interface atualizada para usar tags
+interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface Message {
   id: string;
   content: string;
@@ -24,7 +30,7 @@ interface Chat {
   unread: number;
   profileThumbnail: string | null;
   column: string;
-  ticket: { tag?: string } | null;
+  tags: Tag[];  // ✅ CORRIGIDO: Array de tags ao invés de ticket
 }
 
 interface ChatWindowProps {
@@ -127,14 +133,34 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
           </div>
           
           <div className="flex items-center gap-2">
-            {chat.ticket?.tag && (
-              <Badge 
-                variant="outline"
-                className="text-xs px-3 py-1 bg-green-50 text-green-700 border-green-200"
-              >
-                {chat.ticket.tag}
-              </Badge>
+            {/* ✅ CORRIGIDO: Mostrar múltiplas tags */}
+            {chat.tags && chat.tags.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap">
+                {chat.tags.slice(0, 2).map(tag => (
+                  <Badge 
+                    key={tag.id}
+                    variant="outline"
+                    className="text-xs px-3 py-1"
+                    style={{ 
+                      borderColor: tag.color,
+                      color: tag.color,
+                      backgroundColor: `${tag.color}15`
+                    }}
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+                {chat.tags.length > 2 && (
+                  <Badge 
+                    variant="outline"
+                    className="text-xs px-2 py-1"
+                  >
+                    +{chat.tags.length - 2}
+                  </Badge>
+                )}
+              </div>
             )}
+            
             <Button 
               variant="ghost" 
               size="sm" 
@@ -164,14 +190,18 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
                   }`}
                 >
                   {message.type === "text" ? (
-                    <p className="text-sm leading-relaxed">{message.content}</p>
+                    <p className="text-sm">{message.content}</p>
                   ) : (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 hover:bg-white/20"
                         onClick={() => toggleAudio(message.id)}
+                        className={`p-2 rounded-full ${
+                          message.sender === "user"
+                            ? "hover:bg-white/20"
+                            : "hover:bg-gray-100"
+                        }`}
                       >
                         {playingAudio === message.id ? (
                           <Pause className="h-4 w-4" />
@@ -179,49 +209,57 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
                           <Play className="h-4 w-4" />
                         )}
                       </Button>
-                      <span className="text-xs">0:{message.duration || 15}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-xs hover:bg-white/20"
-                        onClick={() => setAudioSpeed(audioSpeed === 1 ? 2 : 1)}
-                      >
-                        {audioSpeed}x
-                      </Button>
+                      <div className="flex-1">
+                        <div className="h-1 bg-gray-300 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${
+                              message.sender === "user" ? "bg-white" : "bg-green-500"
+                            }`}
+                            style={{ width: playingAudio === message.id ? "100%" : "0%" }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs opacity-70">
+                            {message.duration || 0}s
+                          </span>
+                          <button
+                            onClick={() => setAudioSpeed(audioSpeed === 1 ? 2 : 1)}
+                            className="text-xs opacity-70 hover:opacity-100"
+                          >
+                            {audioSpeed}x
+                          </button>
+                        </div>
+                      </div>
+                      <Mic className="h-4 w-4 opacity-50" />
                     </div>
                   )}
-                  <p className={`text-[10px] mt-1 ${
-                    message.sender === "user" ? "text-green-100" : "text-gray-400"
-                  }`}>
+                  <span
+                    className={`text-[10px] mt-1 block ${
+                      message.sender === "user" ? "text-white/70" : "text-gray-500"
+                    }`}
+                  >
                     {formatTime(message.timestamp)}
-                  </p>
+                  </span>
                 </div>
               </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input de Mensagem */}
-          <div className="p-4 border-t border-gray-200 bg-white">
-            <div className="flex gap-2 items-center">
+          {/* Input de mensagem */}
+          <div className="p-4 bg-white border-t border-gray-100">
+            <div className="flex items-center gap-2">
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Digite uma mensagem..."
                 onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                className="flex-1 bg-gray-50 border-gray-200 rounded-full px-4 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Digite sua mensagem..."
+                className="flex-1 rounded-full border-gray-200 focus:ring-2 focus:ring-green-500"
               />
               <Button
-                variant="ghost"
-                size="sm"
-                className="text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full h-10 w-10 p-0"
-              >
-                <Mic className="h-5 w-5" />
-              </Button>
-              <Button
                 onClick={sendMessage}
+                className="rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 w-10 p-0"
                 disabled={!newMessage.trim()}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full h-10 w-10 p-0 disabled:opacity-50"
               >
                 <Send className="h-4 w-4" />
               </Button>

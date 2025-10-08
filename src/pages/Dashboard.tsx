@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,8 @@ import ChatColumns from "@/components/ChatColumns";
 import TagManager from "@/components/TagManager";
 import Toast from "@/components/Toast";
 import LoadingChats from "./LoadingChats";
+import type { ChatsData } from "@/types/chat";
 
-// Interface para tipar os dados do dashboard
 interface DashboardData {
   user: {
     id: string;
@@ -31,26 +31,6 @@ interface DashboardData {
   };
 }
 
-// Interface para os dados dos chats
-interface ChatsData {
-  success: boolean;
-  message: string;
-  totalChats: number;
-  unreadCount: number;
-  chats: {
-    id: string;
-    name: string;
-    phone: string;
-    lastMessageTime: string | null;
-    isGroup: boolean;
-    unread: number;
-    profileThumbnail: string | null;
-    column: string;
-    ticket: { tag?: string } | null;
-  }[];
-}
-
-// Sidebar com animação e overlay sincronizado
 const Sidebar: React.FC<{
   onClose: () => void;
   onOpenTags: () => void;
@@ -142,7 +122,6 @@ const Sidebar: React.FC<{
   );
 };
 
-// Painel de Configurações com Edição
 const SettingsPanel: React.FC<{ 
   onClose: () => void;
   userData: DashboardData["user"];
@@ -164,7 +143,6 @@ const SettingsPanel: React.FC<{
   const [pendingEmail, setPendingEmail] = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
 
-  // Atualizar Nome
   const handleUpdateName = async () => {
     const token = localStorage.getItem("token");
     
@@ -206,7 +184,6 @@ const SettingsPanel: React.FC<{
     }
   };
 
-  // Solicitar mudança de Email
   const handleRequestEmailChange = async () => {
     const token = localStorage.getItem("token");
     
@@ -240,7 +217,6 @@ const SettingsPanel: React.FC<{
     }
   };
 
-  // Confirmar mudança de Email
   const handleConfirmEmailChange = async () => {
     const token = localStorage.getItem("token");
 
@@ -269,7 +245,6 @@ const SettingsPanel: React.FC<{
     }
   };
 
-  // Solicitar mudança de Senha
   const handleRequestPasswordChange = async () => {
     const token = localStorage.getItem("token");
     
@@ -308,7 +283,6 @@ const SettingsPanel: React.FC<{
     }
   };
 
-  // Confirmar mudança de Senha
   const handleConfirmPasswordChange = async () => {
     const token = localStorage.getItem("token");
 
@@ -361,8 +335,8 @@ const SettingsPanel: React.FC<{
                 <div className="space-y-2">
                   <Input value={newName} onChange={(e) => setNewName(e.target.value)} className="mb-2" />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleUpdateName} className="bg-green-500 hover:bg-green-600">Salvar</Button>
-                    <Button size="sm" variant="outline" onClick={() => { setEditingName(false); setNewName(userData.name); }}>Cancelar</Button>
+                    <Button type="button" size="sm" onClick={handleUpdateName} className="bg-green-500 hover:bg-green-600">Salvar</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => { setEditingName(false); setNewName(userData.name); }}>Cancelar</Button>
                   </div>
                 </div>
               ) : (
@@ -492,7 +466,6 @@ const SettingsPanel: React.FC<{
   );
 };
 
-// Dashboard principal
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isConnected, setIsConnected] = useState(false);
@@ -503,16 +476,18 @@ const Dashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [chatsData, setChatsData] = useState<ChatsData | null>(null);
   const [toast, setToast] = useState<{ message: string; description?: string; variant?: string } | null>(null);
+  const [tagsVersion, setTagsVersion] = useState(0);
   
   const [showLoadingChats, setShowLoadingChats] = useState(false);
   const [totalChatsForLoading, setTotalChatsForLoading] = useState(0);
-  
-  // ⭐ NOVO ESTADO - Para controlar verificação inicial de conexão
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
+  
+  // ✅ Ref para controlar se a verificação inicial já foi feita
+  const hasCheckedInitialConnection = useRef(false);
 
-  const showToast = ({ message, description, variant = "default" }: { message: string; description?: string; variant?: string }) => {
+  const showToast = useCallback(({ message, description, variant = "default" }: { message: string; description?: string; variant?: string }) => {
     setToast({ message, description, variant });
-  };
+  }, []);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
@@ -553,13 +528,10 @@ const Dashboard: React.FC = () => {
           
           if (data.user?.role) {
             localStorage.setItem("userRole", data.user.role);
-            console.log("🔐 Role atualizada do backend:", data.user.role);
           }
           
           localStorage.setItem("dashboardData", JSON.stringify(data));
-          console.log("Dados do dashboard carregados:", data);
         } else {
-          console.error("Sessão inválida");
           handleLogout();
         }
       } catch (error) {
@@ -586,7 +558,7 @@ const Dashboard: React.FC = () => {
       
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [showToast]);
 
   const handleConnected = (data: ChatsData | null) => {
     setIsConnected(true);
@@ -600,7 +572,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleLoadingComplete = (data: ChatsData | null) => {
+  const handleLoadingComplete = useCallback((data: ChatsData | null) => {
     setShowLoadingChats(false);
     setChatsData(data);
     
@@ -608,9 +580,8 @@ const Dashboard: React.FC = () => {
       message: "Chats carregados com sucesso!",
       description: `${data?.totalChats || 0} conversas prontas para visualização.`,
     });
-  };
+  }, [showToast]);
 
-  // ⭐ MODIFICADO - Verifica conexão PRIMEIRO e age de acordo
   useEffect(() => {
     const checkExistingConnection = async () => {
       const token = localStorage.getItem("token");
@@ -620,7 +591,6 @@ const Dashboard: React.FC = () => {
       }
 
       try {
-        // VERIFICAR STATUS PRIMEIRO
         const response = await fetch("http://localhost:8081/dashboard/zapi/status", {
           method: "GET",
           headers: {
@@ -632,11 +602,8 @@ const Dashboard: React.FC = () => {
         const data = await response.json();
         
         if (data.connected) {
-          // JÁ ESTÁ CONECTADO - CARREGAR CHATS DIRETO
-          console.log("✅ WhatsApp já conectado - carregando chats...");
           setIsConnected(true);
           
-          // Buscar os chats imediatamente
           const chatsResponse = await fetch("http://localhost:8081/dashboard/zapi/chats_info", {
             method: "GET",
             headers: {
@@ -656,12 +623,9 @@ const Dashboard: React.FC = () => {
           
           setIsCheckingConnection(false);
         } else {
-          // NÃO CONECTADO - MOSTRAR CARD E CLICAR AUTOMATICAMENTE
-          console.log("❌ WhatsApp não conectado - abrindo QR Code...");
           setIsConnected(false);
           setIsCheckingConnection(false);
           
-          // Abrir QR automaticamente após mostrar o card
           setTimeout(() => {
             setShowQR(true);
           }, 500);
@@ -670,19 +634,19 @@ const Dashboard: React.FC = () => {
         console.error("Erro ao verificar conexão:", error);
         setIsCheckingConnection(false);
         
-        // Em caso de erro, mostrar card e abrir QR
         setTimeout(() => {
           setShowQR(true);
         }, 500);
       }
     };
 
-    if (dashboardData) {
+    // ✅ Só executa a verificação de conexão uma vez, na primeira vez que dashboardData está disponível
+    if (dashboardData && !hasCheckedInitialConnection.current) {
+      hasCheckedInitialConnection.current = true;
       checkExistingConnection();
     }
   }, [dashboardData]);
 
-  // ⭐ NOVO - Verificação periódica para detectar desconexão durante uso
   useEffect(() => {
     if (!isConnected || !chatsData) return;
 
@@ -702,8 +666,6 @@ const Dashboard: React.FC = () => {
         const data = await response.json();
         
         if (!data.connected) {
-          // WHATSAPP DESCONECTOU!
-          console.log("🔌 WhatsApp desconectado - voltando para tela de conexão");
           setIsConnected(false);
           setChatsData(null);
           
@@ -713,7 +675,6 @@ const Dashboard: React.FC = () => {
             variant: "destructive",
           });
           
-          // Abrir QR automaticamente
           setTimeout(() => {
             setShowQR(true);
           }, 500);
@@ -721,7 +682,7 @@ const Dashboard: React.FC = () => {
       } catch (error) {
         console.error("Erro ao verificar status:", error);
       }
-    }, 10000); // Verifica a cada 10 segundos
+    }, 10000);
 
     return () => clearInterval(checkConnectionInterval);
   }, [isConnected, chatsData, showToast]);
@@ -737,7 +698,6 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // ⭐ NOVO - Loading durante verificação de conexão
   if (isCheckingConnection) {
     return (
       <div className="min-h-screen bg-[#f4f8f9] flex items-center justify-center">
@@ -817,12 +777,27 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <ChatColumns chatsData={chatsData} />
+            <ChatColumns 
+              chatsData={chatsData} 
+              showToast={showToast} 
+              tagsVersion={tagsVersion}
+            />
           )}
         </main>
 
         {showQR && <QRConnection onClose={() => setShowQR(false)} onConnected={handleConnected} showToast={showToast} />}
-        {showTagManager && <TagManager onClose={() => setShowTagManager(false)} />}
+        {showTagManager && (
+          <TagManager 
+            onClose={() => setShowTagManager(false)} 
+            onTagsUpdated={() => {
+              setTagsVersion(prev => prev + 1);
+              showToast({
+                message: "Etiquetas atualizadas!",
+                description: "As alterações foram salvas com sucesso.",
+              });
+            }} 
+          />
+        )}
         {showSettings && (
           <SettingsPanel 
             onClose={() => setShowSettings(false)}

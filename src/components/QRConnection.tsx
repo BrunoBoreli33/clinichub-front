@@ -8,25 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, RefreshCw, AlertCircle } from "lucide-react";
-
-// Interface para os dados dos chats
-interface ChatsData {
-  success: boolean;
-  message: string;
-  totalChats: number;
-  unreadCount: number;
-  chats: Array<{
-    id: string;
-    name: string;
-    phone: string;
-    lastMessageTime: string | null;
-    isGroup: boolean;
-    unread: number;
-    profileThumbnail: string | null;
-    column: string;
-    ticket: { tag?: string } | null;
-  }>;
-}
+import { ChatsData } from "@/types/chat";  // ✅ Import correto
 
 interface QRConnectionProps {
   onClose: () => void;
@@ -45,7 +27,6 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const attemptsRef = useRef(0);
 
-  // MÉTODO MODIFICADO: Agora inicia o carregamento quando detecta conexão
   const fetchQRCode = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -66,13 +47,11 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
 
       const data = await response.json();
 
-      // MODIFICADO: Se já estiver conectado, inicia carregamento de chats
       if (data.connected) {
         setStep("success");
         stopPolling();
         setQrCodeImage(null);
         
-        // MODIFICADO: Buscar chats e retornar para mostrar tela de carregamento
         setTimeout(async () => {
           try {
             const chatsResponse = await fetch("http://localhost:8081/dashboard/zapi/chats_info", {
@@ -84,8 +63,6 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
             });
             
             const chatsData = await chatsResponse.json();
-            
-            // MODIFICADO: Passa os dados para o Dashboard mostrar a tela de carregamento
             onConnected(chatsData);
             
             showToast({
@@ -105,7 +82,6 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
         return;
       }
 
-      // Se veio QR Code, exibe
       if (data.qrCode) {
         setQrCodeImage(data.qrCode);
         setStep("qr");
@@ -134,10 +110,8 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
     setCanRetry(false);
     setStep("qr");
 
-    // Primeira chamada imediata
     fetchQRCode();
 
-    // Polling a cada 15 segundos se ainda não estiver conectado
     pollingIntervalRef.current = setInterval(() => {
       if (step === "success") {
         stopPolling();

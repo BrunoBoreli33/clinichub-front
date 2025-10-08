@@ -510,7 +510,7 @@ const AdminPanel = () => {
                 <TooltipProvider delayDuration={200}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="w-4 h-4 text-blue-500 cursor-help" />
+                      <Info className="w-4 h-4 text-amber-500 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent 
                       side="right" 
@@ -533,30 +533,50 @@ const AdminPanel = () => {
               />
             </div>
 
+            {/* ⭐ NOVA ORDEM: ID, TOKEN, CLIENT-TOKEN */}
             <div>
-              <Label>Client Token</Label>
-              <Input
-                value={formData.clientToken}
-                onChange={(e) => setFormData({...formData, clientToken: e.target.value})}
-                placeholder="Token do cliente"
-              />
-            </div>
-
-            <div>
-              <Label>Seu Token</Label>
-              <Input
-                value={formData.seuToken}
-                onChange={(e) => setFormData({...formData, seuToken: e.target.value})}
-                placeholder="Seu token de acesso"
-              />
-            </div>
-
-            <div>
-              <Label>Sua Instância</Label>
+              <Label>ID da instância</Label>
               <Input
                 value={formData.suaInstancia}
                 onChange={(e) => setFormData({...formData, suaInstancia: e.target.value})}
-                placeholder="Nome da instância"
+                placeholder="Identificador da instância"
+              />
+            </div>
+
+            <div>
+              <Label>Token da instância</Label>
+              <Input
+                value={formData.seuToken}
+                onChange={(e) => setFormData({...formData, seuToken: e.target.value})}
+                placeholder="Token de acesso da instância"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Label>Client-Token</Label>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-4 h-4 text-amber-500 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="right" 
+                      align="center"
+                      sideOffset={5}
+                      className="max-w-xs z-[100]"
+                    >
+                      <p className="text-sm">
+                        Para obter o Client-Token, vá para a opção "Segurança" no painel do Z-API e clique em "Configurar Agora" na opção "Token de segurança da conta"
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Input
+                value={formData.clientToken}
+                onChange={(e) => setFormData({...formData, clientToken: e.target.value})}
+                placeholder="Token de segurança da conta"
               />
             </div>
 
@@ -618,7 +638,7 @@ const AdminPanel = () => {
                 <TooltipProvider delayDuration={200}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="w-4 h-4 text-blue-500 cursor-help" />
+                      <Info className="w-4 h-4 text-amber-500 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent 
                       side="right" 
@@ -627,7 +647,7 @@ const AdminPanel = () => {
                       className="max-w-xs z-[100]"
                     >
                       <p className="text-sm">
-                        Número do telefone conectado à instância
+                        Número do telefone que será conectado à instância
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -640,16 +660,17 @@ const AdminPanel = () => {
               />
             </div>
 
+            {/* ⭐ NOVA ORDEM: ID, TOKEN, CLIENT-TOKEN */}
             <div>
-              <Label>Client Token</Label>
+              <Label>ID da instância</Label>
               <Input
-                value={formData.clientToken}
-                onChange={(e) => setFormData({...formData, clientToken: e.target.value})}
+                value={formData.suaInstancia}
+                onChange={(e) => setFormData({...formData, suaInstancia: e.target.value})}
               />
             </div>
 
             <div>
-              <Label>Seu Token</Label>
+              <Label>Token da instância</Label>
               <Input
                 value={formData.seuToken}
                 onChange={(e) => setFormData({...formData, seuToken: e.target.value})}
@@ -657,10 +678,29 @@ const AdminPanel = () => {
             </div>
 
             <div>
-              <Label>Sua Instância</Label>
+              <div className="flex items-center gap-2 mb-2">
+                <Label>Client-Token</Label>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-4 h-4 text-amber-500 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="right" 
+                      align="center"
+                      sideOffset={5}
+                      className="max-w-xs z-[100]"
+                    >
+                      <p className="text-sm">
+                        Para obter o Client-Token, vá para a opção "Segurança" no painel do Z-API e clique em "Configurar Agora" na opção "Token de segurança da conta"
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
-                value={formData.suaInstancia}
-                onChange={(e) => setFormData({...formData, suaInstancia: e.target.value})}
+                value={formData.clientToken}
+                onChange={(e) => setFormData({...formData, clientToken: e.target.value})}
               />
             </div>
 

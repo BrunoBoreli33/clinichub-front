@@ -1,25 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Progress } from "@/components/ui/progress";
 import { MessageCircle, Users, Image } from "lucide-react";
-
-// Interface para tipar os dados dos chats
-interface ChatsData {
-  success: boolean;
-  message: string;
-  totalChats: number;
-  unreadCount: number;
-  chats: {
-    id: string;
-    name: string;
-    phone: string;
-    lastMessageTime: string | null;
-    isGroup: boolean;
-    unread: number;
-    profileThumbnail: string | null;
-    column: string;
-    ticket: { tag?: string } | null;
-  }[];
-}
+import { ChatsData } from "@/types/chat";  // ✅ Import correto
 
 interface LoadingChatsProps {
   onLoadingComplete: (chatsData: ChatsData | null) => void;
