@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, RefreshCw, AlertCircle } from "lucide-react";
 import { ChatsData } from "@/types/chat";  // ✅ Import correto
+import { buildUrl } from "@/lib/api";
 
 interface QRConnectionProps {
   onClose: () => void;
@@ -37,7 +38,7 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
 
     try {
       setIsLoading(true);
-      const response = await fetch("http://localhost:8081/dashboard/zapi/qr-code", {
+  const response = await fetch(buildUrl('/dashboard/zapi/qr-code'), {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,

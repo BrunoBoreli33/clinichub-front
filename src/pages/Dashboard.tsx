@@ -20,6 +20,7 @@ import TagManager from "@/components/TagManager";
 import Toast from "@/components/Toast";
 import LoadingChats from "./LoadingChats";
 import type { ChatsData } from "@/types/chat";
+import { buildUrl } from "@/lib/api";
 
 interface DashboardData {
   user: {
