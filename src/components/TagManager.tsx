@@ -23,7 +23,7 @@ const predefinedColors = [
   "#EC4899", "#84CC16", "#F97316", "#6366F1", "#14B8A6"
 ];
 
-const API_URL = "http://localhost:8081";
+import { buildUrl } from "@/lib/api";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -34,7 +34,7 @@ const getAuthHeaders = () => {
 };
 
 const getAllTagsAPI = async (): Promise<Tag[]> => {
-  const response = await fetch(`${API_URL}/dashboard/tags`, {
+  const response = await fetch(buildUrl('/dashboard/tags'), {
     method: "GET",
     headers: getAuthHeaders(),
   });
@@ -49,7 +49,7 @@ const getAllTagsAPI = async (): Promise<Tag[]> => {
 };
 
 const createTagAPI = async (tagData: { name: string; color: string }): Promise<Tag> => {
-  const response = await fetch(`${API_URL}/dashboard/tags`, {
+  const response = await fetch(buildUrl('/dashboard/tags'), {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify(tagData),
@@ -66,7 +66,7 @@ const createTagAPI = async (tagData: { name: string; color: string }): Promise<T
 };
 
 const updateTagAPI = async (tagId: string, tagData: { name: string; color: string }): Promise<Tag> => {
-  const response = await fetch(`${API_URL}/dashboard/tags/${tagId}`, {
+  const response = await fetch(buildUrl(`/dashboard/tags/${tagId}`), {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify(tagData),
@@ -83,7 +83,7 @@ const updateTagAPI = async (tagId: string, tagData: { name: string; color: strin
 };
 
 const deleteTagAPI = async (tagId: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/dashboard/tags/${tagId}`, {
+  const response = await fetch(buildUrl(`/dashboard/tags/${tagId}`), {
     method: "DELETE",
     headers: getAuthHeaders(),
   });

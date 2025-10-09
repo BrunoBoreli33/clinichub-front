@@ -1,7 +1,7 @@
 // src/api/tags.ts
 // ✅ Crie este arquivo SOMENTE se quiser separar as funções da API
 
-const API_URL = "http://localhost:8081";
+import { buildUrl } from "@/lib/api";
 
 export interface Tag {
   id: string;
@@ -28,7 +28,7 @@ const getAuthHeaders = () => {
  * Buscar todas as tags do usuário
  */
 export const getAllTags = async (): Promise<Tag[]> => {
-  const response = await fetch(`${API_URL}/dashboard/tags`, {
+  const response = await fetch(buildUrl('/dashboard/tags'), {
     method: "GET",
     headers: getAuthHeaders(),
   });
@@ -46,7 +46,7 @@ export const getAllTags = async (): Promise<Tag[]> => {
  * Criar nova tag
  */
 export const createTag = async (tagData: TagRequest): Promise<Tag> => {
-  const response = await fetch(`${API_URL}/dashboard/tags`, {
+  const response = await fetch(buildUrl('/dashboard/tags'), {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify(tagData),
@@ -65,7 +65,7 @@ export const createTag = async (tagData: TagRequest): Promise<Tag> => {
  * Atualizar tag existente
  */
 export const updateTag = async (tagId: string, tagData: TagRequest): Promise<Tag> => {
-  const response = await fetch(`${API_URL}/dashboard/tags/${tagId}`, {
+  const response = await fetch(buildUrl(`/dashboard/tags/${tagId}`), {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify(tagData),
@@ -84,7 +84,7 @@ export const updateTag = async (tagId: string, tagData: TagRequest): Promise<Tag
  * Deletar tag
  */
 export const deleteTag = async (tagId: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/dashboard/tags/${tagId}`, {
+  const response = await fetch(buildUrl(`/dashboard/tags/${tagId}`), {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
@@ -100,7 +100,7 @@ export const deleteTag = async (tagId: string): Promise<void> => {
  * Adicionar tags a um chat
  */
 export const addTagsToChat = async (chatId: string, tagIds: string[]): Promise<void> => {
-  const response = await fetch(`${API_URL}/dashboard/zapi/chats/${chatId}/tags`, {
+  const response = await fetch(buildUrl(`/dashboard/zapi/chats/${chatId}/tags`), {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({ tagIds }),
@@ -117,7 +117,7 @@ export const addTagsToChat = async (chatId: string, tagIds: string[]): Promise<v
  * Remover tag de um chat
  */
 export const removeTagFromChat = async (chatId: string, tagId: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/dashboard/zapi/chats/${chatId}/tags/${tagId}`, {
+  const response = await fetch(buildUrl(`/dashboard/zapi/chats/${chatId}/tags/${tagId}`), {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
@@ -133,7 +133,7 @@ export const removeTagFromChat = async (chatId: string, tagId: string): Promise<
  * Substituir todas as tags de um chat
  */
 export const setTagsForChat = async (chatId: string, tagIds: string[]): Promise<void> => {
-  const response = await fetch(`${API_URL}/dashboard/zapi/chats/${chatId}/tags`, {
+  const response = await fetch(buildUrl(`/dashboard/zapi/chats/${chatId}/tags`), {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify({ tagIds }),

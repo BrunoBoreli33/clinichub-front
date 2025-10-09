@@ -8,71 +8,54 @@
 ## How can I edit this code?
 
 There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/8cbb4cf4-89c8-4122-a316-7d9206b5af94) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/8cbb4cf4-89c8-4122-a316-7d9206b5af94) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
-=======
 # clinichub-front
 Clinic Hub CRM Front End
->>>>>>> clinichub/main
+
+## Como configurar no Render (passo a passo)
+
+1. Crie um novo serviço Web no Render ou conecte este repositório ao Render.
+
+2. No painel do projeto Render, abra `Environment` → `Environment Variables` (ou `Settings` → `Environment`).
+
+3. Adicione a variável de ambiente para a URL do backend (necessária em produção):
+
+	- Key: `VITE_API_URL`
+	- Value: `https://clinichub-back-latest.onrender.com`
+	- Envie como `Production` (não `Pull Request` / `Preview`) se quiser só usar em produção.
+
+4. Configure o comando de build (Render geralmente detecta automaticamente via `package.json`):
+
+	- Build Command: `npm run build`
+	- Start Command / Serve: `npm run preview` (ou conforme instruções do Render — Render executa a build e serve os assets estáticos automaticamente em algumas configurações)
+
+5. Variáveis opcionais locais
+
+	- Para desenvolvimento local, mantenha o arquivo `.env` com `VITE_API_URL=` vazio (já incluído no repo). Quando a variável estiver vazia, a aplicação usará `http://localhost:8081` como fallback (comportamento para dev).
+
+6. Deploy
+
+	- Após salvar as configurações no Render, acione o deploy (Manual Deploy) ou permita que o Render faça deploy automático ao push no branch configurado (ex.: `main`).
+
+7. Verificação pós-deploy
+
+	- Verifique os logs do deploy no dashboard do Render para garantir que a build completou sem erros.
+	- Abra a URL pública fornecida pelo Render e teste fluxos que chamam o backend (login, cadastro, carregamento de chats). As chamadas do frontend irão para `VITE_API_URL` configurada.
+
+8. Dicas e troubleshooting
+
+	- Se nos logs do frontend aparecerem erros de CORS ou 404, verifique se o `VITE_API_URL` está correto e se o backend está acessível publicamente.
+	- Caso precise depurar localmente com as mesmas variáveis, exporte `VITE_API_URL` localmente antes de rodar a build:
+
+```bash
+# Exemplo local (substitua pela URL de staging se necessário)
+export VITE_API_URL=https://clinichub-back-latest.onrender.com
+npm run build
+npm run preview
+```
+
+	- O projeto já inclui um fallback: quando `import.meta.env.VITE_API_URL` for vazio, o frontend usa `http://localhost:8081` (útil para desenvolvimento local).
+
+## Observações
+
+- As chamadas HTTP do frontend foram centralizadas em `src/lib/api.ts` — use `buildUrl('/rota')` ou `API_BASE` quando criar novas chamadas ao backend.
+- Se preferir usar um proxy no Vite para desenvolvimento, também é possível configurar `vite.config.ts` com `server.proxy` apontando para `http://localhost:8081`.

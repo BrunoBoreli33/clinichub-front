@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2 } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 import * as tagApi from "@/api/tags";
+import { buildUrl } from "@/lib/api";
 import type { Chat, Tag, ChatsData } from "@/types/chat";
 
 interface ChatColumnsProps {
@@ -518,7 +519,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
     }
 
     try {
-      const response = await fetch(`http://localhost:8081/dashboard/zapi/chats/${chatId}/column`, {
+  const response = await fetch(buildUrl(`/dashboard/zapi/chats/${chatId}/column`), {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -573,7 +574,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
       const token = localStorage.getItem("token");
       if (token) {
         try {
-          const response = await fetch("http://localhost:8081/dashboard/zapi/chats", {
+          const response = await fetch(buildUrl('/dashboard/zapi/chats'), {
             method: "GET",
             headers: {
               "Authorization": `Bearer ${token}`,

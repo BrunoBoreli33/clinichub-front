@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Progress } from "@/components/ui/progress";
+import { buildUrl } from "@/lib/api";
 import { MessageCircle, Users, Image } from "lucide-react";
 import { ChatsData } from "@/types/chat";  // ✅ Import correto
 
@@ -24,7 +25,7 @@ const LoadingChats = ({ onLoadingComplete, totalChats }: LoadingChatsProps) => {
 
       try {
         const response = await fetch(
-          "http://localhost:8081/dashboard/zapi/chats_loading_progress",
+          buildUrl('/dashboard/zapi/chats_loading_progress'),
           {
             method: "GET",
             headers: {
@@ -60,7 +61,7 @@ const LoadingChats = ({ onLoadingComplete, totalChats }: LoadingChatsProps) => {
             setTimeout(async () => {
               try {
                 const chatsResponse = await fetch(
-                  "http://localhost:8081/dashboard/zapi/chats",
+                  buildUrl('/dashboard/zapi/chats'),
                   {
                     method: "GET",
                     headers: {

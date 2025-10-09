@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Edit, Plus, RefreshCw, ArrowLeft, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { buildUrl } from "@/lib/api";
 
 interface WebInstance {
   id: string;
@@ -68,7 +69,7 @@ const AdminPanel = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8081/dashboard?userId=${userId}`, {
+  const response = await fetch(buildUrl(`/dashboard?userId=${userId}`), {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -119,7 +120,7 @@ const AdminPanel = () => {
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch("http://localhost:8081/api/dev/webinstances", {
+  const response = await fetch(buildUrl('/api/dev/webinstances'), {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -186,7 +187,7 @@ const AdminPanel = () => {
 
       console.log("Criando instância:", body);
 
-      const response = await fetch("http://localhost:8081/api/dev/webinstances", {
+  const response = await fetch(buildUrl('/api/dev/webinstances'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -228,7 +229,7 @@ const AdminPanel = () => {
 
       console.log("Enviando atualização:", body);
 
-      const response = await fetch(`http://localhost:8081/api/dev/webinstances/${selectedInstance.id}`, {
+  const response = await fetch(buildUrl(`/api/dev/webinstances/${selectedInstance.id}`), {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -260,7 +261,7 @@ const AdminPanel = () => {
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch(`http://localhost:8081/api/dev/webinstances/${id}?confirm=true`, {
+  const response = await fetch(buildUrl(`/api/dev/webinstances/${id}?confirm=true`), {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`

@@ -153,7 +153,7 @@ const SettingsPanel: React.FC<{
     }
 
     try {
-      const response = await fetch("http://localhost:8081/api/profile/update-name", {
+  const response = await fetch(buildUrl('/api/profile/update-name'), {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -194,7 +194,7 @@ const SettingsPanel: React.FC<{
     }
 
     try {
-      const response = await fetch("http://localhost:8081/api/profile/request-email-change", {
+  const response = await fetch(buildUrl('/api/profile/request-email-change'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -222,7 +222,7 @@ const SettingsPanel: React.FC<{
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch("http://localhost:8081/api/profile/confirm-email-change", {
+  const response = await fetch(buildUrl('/api/profile/confirm-email-change'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -260,7 +260,7 @@ const SettingsPanel: React.FC<{
     }
 
     try {
-      const response = await fetch("http://localhost:8081/api/profile/request-password-change", {
+  const response = await fetch(buildUrl('/api/profile/request-password-change'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -288,7 +288,7 @@ const SettingsPanel: React.FC<{
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch("http://localhost:8081/api/profile/confirm-password-change", {
+  const response = await fetch(buildUrl('/api/profile/confirm-password-change'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -515,7 +515,7 @@ const Dashboard: React.FC = () => {
       }
 
       try {
-        const response = await fetch(`http://localhost:8081/dashboard?userId=${userId}`, {
+  const response = await fetch(buildUrl(`/dashboard?userId=${userId}`), {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -592,7 +592,7 @@ const Dashboard: React.FC = () => {
       }
 
       try {
-        const response = await fetch("http://localhost:8081/dashboard/zapi/status", {
+  const response = await fetch(buildUrl('/dashboard/zapi/status'), {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -605,7 +605,7 @@ const Dashboard: React.FC = () => {
         if (data.connected) {
           setIsConnected(true);
           
-          const chatsResponse = await fetch("http://localhost:8081/dashboard/zapi/chats_info", {
+          const chatsResponse = await fetch(buildUrl('/dashboard/zapi/chats_info'), {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -656,7 +656,7 @@ const Dashboard: React.FC = () => {
       if (!token) return;
 
       try {
-        const response = await fetch("http://localhost:8081/dashboard/zapi/status", {
+  const response = await fetch(buildUrl('/dashboard/zapi/status'), {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,

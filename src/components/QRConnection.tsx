@@ -55,7 +55,7 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
         
         setTimeout(async () => {
           try {
-            const chatsResponse = await fetch("http://localhost:8081/dashboard/zapi/chats_info", {
+            const chatsResponse = await fetch(buildUrl('/dashboard/zapi/chats_info'), {
               method: "GET",
               headers: {
                 "Authorization": `Bearer ${token}`,
