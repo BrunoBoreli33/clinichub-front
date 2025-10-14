@@ -17,6 +17,8 @@ import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
 import ChatColumns from "@/components/ChatColumns";
 import TagManager from "@/components/TagManager";
+import * as tagApi from "@/api/tags";
+import { logError } from "@/lib/logger";
 import Toast from "@/components/Toast";
 import LoadingChats from "./LoadingChats";
 import type { ChatsData } from "@/types/chat";
@@ -482,6 +484,17 @@ const Dashboard: React.FC = () => {
   const [showLoadingChats, setShowLoadingChats] = useState(false);
   const [totalChatsForLoading, setTotalChatsForLoading] = useState(0);
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
+  const [availableTags, setAvailableTags] = useState<Array<{ id: string; name: string; color: string }>>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+
+  // Memoized filtered chats — must be declared unconditionally to respect Rules of Hooks
+  const filteredChatsData = React.useMemo(() => {
+    if (!chatsData) return chatsData;
+    if (selectedTagIds.size === 0) return chatsData;
+
+    const filtered = { ...chatsData, chats: chatsData.chats.filter(chat => chat.tags.some(t => selectedTagIds.has(t.id))) };
+    return filtered;
+  }, [chatsData, selectedTagIds]);
   
   // ✅ Ref para controlar se a verificação inicial já foi feita
   const hasCheckedInitialConnection = useRef(false);
@@ -561,6 +574,19 @@ const Dashboard: React.FC = () => {
     }
   }, [showToast]);
 
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await tagApi.getAllTags();
+        setAvailableTags(tags);
+      } catch (error) {
+        logError("Erro ao carregar etiquetas no dashboard", { error });
+      }
+    };
+
+    loadTags();
+  }, [tagsVersion]);
+
   const handleConnected = (data: ChatsData | null) => {
     setIsConnected(true);
     setShowQR(false);
@@ -582,6 +608,17 @@ const Dashboard: React.FC = () => {
       description: `${data?.totalChats || 0} conversas prontas para visualização.`,
     });
   }, [showToast]);
+
+  const toggleTagSelection = (tagId: string) => {
+    setSelectedTagIds(prev => {
+      const next = new Set(prev);
+      if (next.has(tagId)) next.delete(tagId);
+      else next.add(tagId);
+      return next;
+    });
+  };
+
+  const clearTagSelection = () => setSelectedTagIds(new Set());
 
   useEffect(() => {
     const checkExistingConnection = async () => {
@@ -778,11 +815,39 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <ChatColumns 
-              chatsData={chatsData} 
-              showToast={showToast} 
-              tagsVersion={tagsVersion}
-            />
+            <div className="w-full max-w-6xl">
+              <div className="mb-4 flex items-center gap-3 flex-wrap">
+                <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={clearTagSelection}
+                    className={`px-3 py-1 rounded-full text-sm ${selectedTagIds.size === 0 ? 'bg-green-600 text-white' : 'bg-white border'}`}
+                  >
+                    Todas
+                  </button>
+                  {availableTags.map(tag => {
+                    const selected = selectedTagIds.has(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        onClick={() => toggleTagSelection(tag.id)}
+                        className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 border ${selected ? '' : 'bg-white'}`}
+                        style={selected ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
+                      >
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <ChatColumns 
+                chatsData={filteredChatsData} 
+                showToast={showToast} 
+                tagsVersion={tagsVersion}
+              />
+            </div>
           )}
         </main>
 

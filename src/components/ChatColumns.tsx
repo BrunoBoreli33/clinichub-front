@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2 } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 import * as tagApi from "@/api/tags";
+import { logError } from "@/lib/logger";
 import { buildUrl } from "@/lib/api";
 import type { Chat, Tag, ChatsData } from "@/types/chat";
 
@@ -463,7 +464,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
       const tags = await tagApi.getAllTags();
       setAvailableTags(tags);
     } catch (error) {
-      console.error("Erro ao carregar tags:", error);
+      logError("Erro ao carregar tags:", { error });
     }
   };
 
@@ -519,33 +520,22 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
     }
 
     try {
-  const response = await fetch(buildUrl(`/dashboard/zapi/chats/${chatId}/column`), {
-        method: "PUT",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ column: backendColumn })
+      // Use apiFetch so successful mutation triggers a reload (default behavior)
+      const apiFetch = (await import("@/lib/http")).default;
+      await apiFetch(`/dashboard/zapi/chats/${chatId}/column`, { method: 'PUT', body: JSON.stringify({ column: backendColumn }) });
+      // optimistic UI update (will be superseded by reload)
+      setChats(prev => ({
+        ...prev,
+        [fromColumn]: prev[fromColumn].filter(c => c.id !== chatId),
+        [toColumn]: [...(prev[toColumn] || []), { ...chat, column: backendColumn }]
+      }));
+
+      showToast?.({
+        message: "Chat movido com sucesso!",
+        description: `Movido para ${columnsConfig.find(c => c.id === toColumn)?.title}`,
       });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setChats(prev => ({
-          ...prev,
-          [fromColumn]: prev[fromColumn].filter(c => c.id !== chatId),
-          [toColumn]: [...(prev[toColumn] || []), { ...chat, column: backendColumn }]
-        }));
-
-        showToast?.({
-          message: "Chat movido com sucesso!",
-          description: `Movido para ${columnsConfig.find(c => c.id === toColumn)?.title}`,
-        });
-      } else {
-        throw new Error(data.message || "Erro ao mover chat");
-      }
     } catch (error) {
-      console.error("Erro ao mover chat:", error);
+      logError("Erro ao mover chat:", { error });
       showToast?.({
         message: "Erro ao mover chat",
         description: error instanceof Error ? error.message : "Não foi possível mover o chat.",
@@ -609,7 +599,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
             setChats(organized);
           }
         } catch (error) {
-          console.error("Erro ao recarregar chats:", error);
+          logError("Erro ao recarregar chats:", { error });
         }
       }
     }

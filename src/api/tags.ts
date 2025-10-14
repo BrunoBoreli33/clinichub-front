@@ -2,6 +2,7 @@
 // ✅ Crie este arquivo SOMENTE se quiser separar as funções da API
 
 import { buildUrl } from "@/lib/api";
+import apiFetch from "@/lib/http";
 
 export interface Tag {
   id: string;
@@ -28,17 +29,8 @@ const getAuthHeaders = () => {
  * Buscar todas as tags do usuário
  */
 export const getAllTags = async (): Promise<Tag[]> => {
-  const response = await fetch(buildUrl('/dashboard/tags'), {
-    method: "GET",
-    headers: getAuthHeaders(),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || "Erro ao buscar etiquetas");
-  }
-
+  const data = await apiFetch('/dashboard/tags', { method: 'GET' });
+  if (!data || !data.tags) throw new Error('Erro ao buscar etiquetas');
   return data.tags;
 };
 
@@ -46,18 +38,7 @@ export const getAllTags = async (): Promise<Tag[]> => {
  * Criar nova tag
  */
 export const createTag = async (tagData: TagRequest): Promise<Tag> => {
-  const response = await fetch(buildUrl('/dashboard/tags'), {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(tagData),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || "Erro ao criar etiqueta");
-  }
-
+  const data = await apiFetch('/dashboard/tags', { method: 'POST', body: JSON.stringify(tagData) });
   return data.tag;
 };
 
@@ -65,18 +46,7 @@ export const createTag = async (tagData: TagRequest): Promise<Tag> => {
  * Atualizar tag existente
  */
 export const updateTag = async (tagId: string, tagData: TagRequest): Promise<Tag> => {
-  const response = await fetch(buildUrl(`/dashboard/tags/${tagId}`), {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(tagData),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || "Erro ao atualizar etiqueta");
-  }
-
+  const data = await apiFetch(`/dashboard/tags/${tagId}`, { method: 'PUT', body: JSON.stringify(tagData) });
   return data.tag;
 };
 
@@ -84,64 +54,26 @@ export const updateTag = async (tagId: string, tagData: TagRequest): Promise<Tag
  * Deletar tag
  */
 export const deleteTag = async (tagId: string): Promise<void> => {
-  const response = await fetch(buildUrl(`/dashboard/tags/${tagId}`), {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || "Erro ao deletar etiqueta");
-  }
+  await apiFetch(`/dashboard/tags/${tagId}`, { method: 'DELETE' });
 };
 
 /**
  * Adicionar tags a um chat
  */
 export const addTagsToChat = async (chatId: string, tagIds: string[]): Promise<void> => {
-  const response = await fetch(buildUrl(`/dashboard/zapi/chats/${chatId}/tags`), {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ tagIds }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || "Erro ao adicionar tags ao chat");
-  }
+  await apiFetch(`/dashboard/zapi/chats/${chatId}/tags`, { method: 'POST', body: JSON.stringify({ tagIds }) });
 };
 
 /**
  * Remover tag de um chat
  */
 export const removeTagFromChat = async (chatId: string, tagId: string): Promise<void> => {
-  const response = await fetch(buildUrl(`/dashboard/zapi/chats/${chatId}/tags/${tagId}`), {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || "Erro ao remover tag do chat");
-  }
+  await apiFetch(`/dashboard/zapi/chats/${chatId}/tags/${tagId}`, { method: 'DELETE' });
 };
 
 /**
  * Substituir todas as tags de um chat
  */
 export const setTagsForChat = async (chatId: string, tagIds: string[]): Promise<void> => {
-  const response = await fetch(buildUrl(`/dashboard/zapi/chats/${chatId}/tags`), {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ tagIds }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || "Erro ao atualizar tags do chat");
-  }
+  await apiFetch(`/dashboard/zapi/chats/${chatId}/tags`, { method: 'PUT', body: JSON.stringify({ tagIds }) });
 };
