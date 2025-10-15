@@ -12,6 +12,7 @@ import {
   ChevronRight,
   User,
   MessageCircle,
+  File,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
@@ -620,6 +621,32 @@ const Dashboard: React.FC = () => {
 
   const clearTagSelection = () => setSelectedTagIds(new Set());
 
+  const exportFilteredToCSV = () => {
+    const data = filteredChatsData?.chats || [];
+    if (!data.length) {
+      showToast({ message: 'Nenhuma conversa para exportar', variant: 'destructive' });
+      return;
+    }
+
+    const rows = data.map(chat => {
+      const tagNames = (chat.tags || []).map(t => t.name).join('; ');
+      return [chat.name || '', chat.phone || '', tagNames];
+    });
+
+    const header = ['Nome', 'Telefone', 'Etiquetas'];
+    const csvContent = [header, ...rows].map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chats_export_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     const checkExistingConnection = async () => {
       const token = localStorage.getItem("token");
@@ -816,9 +843,10 @@ const Dashboard: React.FC = () => {
             </Card>
           ) : (
             <div className="w-full max-w-6xl">
-              <div className="mb-4 flex items-center gap-3 flex-wrap">
-                <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
-                <div className="flex items-center gap-2 flex-wrap">
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
+                  <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={clearTagSelection}
                     className={`px-3 py-1 rounded-full text-sm ${selectedTagIds.size === 0 ? 'bg-green-600 text-white' : 'bg-white border'}`}
@@ -839,6 +867,18 @@ const Dashboard: React.FC = () => {
                       </button>
                     );
                   })}
+                  </div>
+                </div>
+
+                <div className="ml-auto">
+                  <button
+                    onClick={exportFilteredToCSV}
+                    className="flex items-center gap-2 px-3 py-1 rounded-md bg-white border hover:bg-gray-50"
+                    title="Exportar conversas filtradas para CSV"
+                  >
+                    <File className="w-4 h-4" />
+                    <span className="text-sm">Exportar</span>
+                  </button>
                 </div>
               </div>
 
