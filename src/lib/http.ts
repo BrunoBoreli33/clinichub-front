@@ -29,23 +29,10 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}) {
     // ignore JSON parse errors for non-json responses
   }
 
-  // If successful mutation, trigger reload (POST/PUT/DELETE)
-  const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(method);
-  const success = res.ok && (data === null || data.success === undefined || data.success === true);
-
-  if (isMutation && success && !opts.skipAutoReload) {
-    // dispatch an event for listeners
-    try {
-      window.dispatchEvent(new CustomEvent('app:backend-mutated', { detail: { path, method, data } }));
-    } catch (e) {
-      // noop
-    }
-
-    // small delay to allow UI to settle
-    setTimeout(() => {
-      try { window.location.reload(); } catch (e) { /* noop */ }
-    }, 450);
-  }
+  // NOTE: previous behavior dispatched an event and automatically reloaded the page
+  // after successful mutations. That behavior was removed to avoid full page reloads
+  // on POST/PUT/DELETE/PATCH. Callers should update UI state or listen to
+  // 'app:backend-mutated' if needed (event dispatch removed to avoid surprises).
 
   if (!res.ok) {
     const message = data?.message || `Request failed with status ${res.status}`;
