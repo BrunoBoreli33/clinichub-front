@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, RefreshCw, AlertCircle } from "lucide-react";
-import { ChatsData } from "@/types/chat";  // ✅ Import correto
+import { ChatsData } from "@/types/chat";
 import { buildUrl } from "@/lib/api";
 
 interface QRConnectionProps {
@@ -38,7 +38,7 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
 
     try {
       setIsLoading(true);
-  const response = await fetch(buildUrl('/dashboard/zapi/qr-code'), {
+      const response = await fetch(buildUrl('/dashboard/zapi/qr-code'), {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -122,7 +122,8 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
       attemptsRef.current += 1;
       setAttempts(attemptsRef.current);
 
-      if (attemptsRef.current >= 3) {
+      // Numero de tentativas (QR Code)
+      if (attemptsRef.current >= 20) {
         stopPolling();
         setCanRetry(true);
         showToast({
@@ -193,12 +194,12 @@ const QRConnection = ({ onClose, onConnected, showToast }: QRConnectionProps) =>
                       Abra o WhatsApp no seu celular
                     </p>
                     <p className="text-xs text-gray-500">
-                      Toque em Mais opções → Aparelhos conectados → Conectar
-                      aparelho
+                      Toque em Mais opções → Aparelhos conectados → Conectar aparelho
                     </p>
+                    {/* Mostrar numero de tentativas (Texto) "de 20" */}
                     {attempts > 0 && (
                       <p className="text-xs text-orange-600">
-                        Tentativa {attempts} de 3
+                        Tentativa {attempts} de 20
                       </p>
                     )}
                   </div>
