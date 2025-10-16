@@ -84,7 +84,8 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 max-h-96 overflow-y-auto">
+        {/* ✅ MODIFICAÇÃO 2: Scroll para mais de 6 etiquetas */}
+        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
           {availableTags.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               Nenhuma etiqueta disponível. Crie etiquetas no menu lateral.
@@ -96,16 +97,18 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
                 className="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-white/20 cursor-pointer hover:bg-white/70 transition-colors"
                 onClick={() => toggleTag(tag.id)}
               >
+                {/* ✅ MODIFICAÇÃO 1 CORRIGIDA: Checkbox sem onCheckedChange para evitar double toggle */}
                 <Checkbox
                   checked={selectedTagIds.has(tag.id)}
-                  onCheckedChange={() => toggleTag(tag.id)}
+                  className="pointer-events-none"
                 />
                 <div
-                  className="w-4 h-4 rounded-full"
+                  className="w-4 h-4 rounded-full flex-shrink-0"
                   style={{ backgroundColor: tag.color }}
                 />
                 <Badge
                   variant="outline"
+                  className="flex-shrink-0"
                   style={{ 
                     borderColor: tag.color, 
                     color: tag.color,
@@ -199,7 +202,6 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     return chat.phone.includes("newsletter") || chat.phone.length > 20;
   };
 
-  // ✅ NOVA FUNÇÃO: Truncar última mensagem
   const truncateMessage = (message: string | null, maxLength: number = 40) => {
     if (!message) return "Sem mensagens";
     if (message.length <= maxLength) return message;
@@ -303,12 +305,17 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
         </p>
       </CardHeader>
 
+      {/* ✅ MODIFICAÇÃO 4: Efeito visual durante drag and drop */}
       <Droppable droppableId={id}>
-        {(provided) => (
+        {(provided, snapshot) => (
           <CardContent
             {...provided.droppableProps}
             ref={provided.innerRef}
-            className="flex-1 overflow-y-auto space-y-2 p-4 pt-0"
+            className={`flex-1 overflow-y-auto space-y-2 p-4 pt-0 transition-all duration-200 ${
+              snapshot.isDraggingOver
+                ? 'bg-green-50/50 ring-2 ring-green-400 ring-inset rounded-lg'
+                : ''
+            }`}
           >
             {sortedChats.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -362,7 +369,6 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                                   {formatTime(chat.lastMessageTime)}
                                 </span>
                               </div>
-                              {/* ✅ CORRIGIDO: Mostra última mensagem ao invés do telefone */}
                               <p className={`text-xs truncate ${
                                 chat.unread > 0 
                                   ? 'font-semibold text-gray-900' 
