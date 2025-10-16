@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,64 +55,87 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [shouldAutoFocus, setShouldAutoFocus] = useState(true);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [lastCheckTime, setLastCheckTime] = useState<string>(new Date().toISOString());
+  const isInitialLoadRef = useRef(true);
 
+  // ✅ CORRIGIDO: Scroll inicial garantido com useLayoutEffect (antes da renderização)
+  useLayoutEffect(() => {
+    if (isInitialLoadRef.current && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+      isInitialLoadRef.current = false;
+    }
+  }, [messages]);
+
+  // Auto-focus e scroll suave após carregamento inicial
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    // Manter foco no input após scroll
-    if (messages.length > 0 && !editingMessageId) {
+    if (!isInitialLoadRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    
+    if (shouldAutoFocus && messages.length > 0 && !editingMessageId) {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [messages, editingMessageId]);
+  }, [messages.length, editingMessageId, shouldAutoFocus]);
 
+  // Carregar mensagens ao abrir chat
   useEffect(() => {
     loadMessages();
-    startCheckingForUpdates();
-
-    return () => {
-      stopCheckingForUpdates();
-    };
   }, [chat.id]);
 
-  const startCheckingForUpdates = () => {
-    checkIntervalRef.current = setInterval(() => {
-      checkForNewMessages();
-    }, 2000);
-  };
+  // ✅ Marcar chat como lido ao abrir
+  useEffect(() => {
+    markChatAsRead();
+  }, [chat.id]);
 
-  const stopCheckingForUpdates = () => {
-    if (checkIntervalRef.current) {
-      clearInterval(checkIntervalRef.current);
-      checkIntervalRef.current = null;
+  // Detectar cliques fora do input
+  useEffect(() => {
+    const messagesContainer = messagesContainerRef.current;
+    
+    const handleClickOutsideInput = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const clickedInput = inputRef.current?.contains(target);
+      
+      if (!clickedInput) {
+        setShouldAutoFocus(false);
+      }
+    };
+
+    if (messagesContainer) {
+      messagesContainer.addEventListener('mousedown', handleClickOutsideInput);
     }
-  };
 
-  const checkForNewMessages = async () => {
+    return () => {
+      if (messagesContainer) {
+        messagesContainer.removeEventListener('mousedown', handleClickOutsideInput);
+      }
+    };
+  }, []);
+
+  const markChatAsRead = async () => {
     const token = localStorage.getItem("token");
-    try {
-      const response = await fetch(
-        buildUrl(`/dashboard/chats/${chat.id}/check-updates?lastCheck=${lastCheckTime}`),
-        {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+    if (!token) return;
 
-      const data = await response.json();
-      if (data.hasNewMessages) {
-        loadMessages(true);
-        setLastCheckTime(new Date().toISOString());
+    try {
+      const response = await fetch(buildUrl(`/dashboard/chats/${chat.id}/mark-read`), {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        console.log("✅ Chat marcado como lido no backend");
       }
     } catch (error) {
-      console.error("Erro ao verificar atualizações:", error);
+      console.error("❌ Erro ao marcar chat como lido:", error);
     }
   };
 
@@ -137,11 +160,6 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
       const data = JSON.parse(text);
       if (data.success) {
         setMessages(data.messages || []);
-        if (!silent) {
-          setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-          }, 100);
-        }
       }
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
@@ -157,7 +175,7 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
     const tempId = `temp_${Date.now()}`;
     setNewMessage("");
 
-    // Auto-focus imediato e após render
+    setShouldAutoFocus(true);
     setTimeout(() => {
       inputRef.current?.focus();
     }, 0);
@@ -211,7 +229,7 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
             ...msg, 
             id: data.data.id, 
             messageId: data.data.messageId, 
-            status: data.data.status || "SENT" // ✅ CORREÇÃO: usa o status retornado ou "SENT"
+            status: data.data.status || "SENT"
           } : msg
         ));
       }
@@ -281,7 +299,7 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
             ...msg, 
             id: data.data.id, 
             messageId: data.data.messageId, 
-            status: data.data.status || "SENT" // ✅ CORREÇÃO: usa o status retornado ou "SENT"
+            status: data.data.status || "SENT"
           } : msg
         ));
       }
@@ -313,6 +331,7 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
 
   const handleEmojiSelect = (emoji: string) => {
     setNewMessage(prev => prev + emoji);
+    setShouldAutoFocus(true);
     setTimeout(() => {
       inputRef.current?.focus();
     }, 0);
@@ -427,7 +446,10 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
 
       <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-gradient-to-b from-gray-50 to-white">
+          <div 
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-6 space-y-3 bg-gradient-to-b from-gray-50 to-white"
+          >
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin text-green-500" />
@@ -440,55 +462,55 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
               messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.fromMe ? "justify-end" : "justify-start"} group`}
+                  className={`flex ${message.fromMe ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                    className={`group max-w-[70%] rounded-2xl px-4 py-2 ${
                       message.fromMe
-                        ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md"
-                        : "bg-white text-gray-800 shadow-sm border border-gray-100"
+                        ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+                        : "bg-white text-gray-900 shadow-sm border border-gray-100"
                     }`}
                   >
-                    {message.type === "audio" && message.audioUrl ? (
-                      <div className="flex items-center gap-3">
-                        <Button
-                          size="sm"
-                          onClick={() => playAudio(message.audioUrl!, message.messageId)}
-                          className={`h-8 w-8 p-0 rounded-full ${
-                            message.fromMe
-                              ? "bg-white/20 hover:bg-white/30"
-                              : "bg-green-100 hover:bg-green-200 text-green-700"
-                          }`}
-                        >
-                          {playingAudio === message.messageId ? (
-                            <Pause className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <div className="flex-1">
-                          <div
-                            className={`h-1 rounded-full overflow-hidden ${
-                              message.fromMe ? "bg-white/20" : "bg-gray-200"
+                    {message.type === "audio" ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            size="sm"
+                            onClick={() => playAudio(message.audioUrl!, message.messageId)}
+                            className={`h-8 w-8 p-0 rounded-full ${
+                              message.fromMe 
+                                ? "bg-white/20 hover:bg-white/30 text-white" 
+                                : "bg-green-500 hover:bg-green-600 text-white"
                             }`}
                           >
-                            <div
-                              className={`h-full ${
-                                message.fromMe ? "bg-white/60" : "bg-green-500"
+                            {playingAudio === message.messageId ? (
+                              <Pause className="h-4 w-4" />
+                            ) : (
+                              <Play className="h-4 w-4 ml-0.5" />
+                            )}
+                          </Button>
+                          <div className="flex-1 relative">
+                            <div className={`h-1 rounded-full ${
+                              message.fromMe ? "bg-white/30" : "bg-gray-200"
+                            }`}>
+                              <div 
+                                className={`h-full rounded-full ${
+                                  message.fromMe ? "bg-white/60" : "bg-green-500"
+                                }`}
+                                style={{
+                                  width: playingAudio === message.messageId ? "100%" : "0%",
+                                  transition: "width 0.3s"
+                                }}
+                              />
+                            </div>
+                            <span
+                              className={`text-xs mt-1 block ${
+                                message.fromMe ? "text-white/70" : "text-gray-500"
                               }`}
-                              style={{
-                                width: playingAudio === message.messageId ? "100%" : "0%",
-                                transition: "width 0.3s"
-                              }}
-                            />
+                            >
+                              {formatDuration(message.audioDuration || 0)}
+                            </span>
                           </div>
-                          <span
-                            className={`text-xs mt-1 block ${
-                              message.fromMe ? "text-white/70" : "text-gray-500"
-                            }`}
-                          >
-                            {formatDuration(message.audioDuration || 0)}
-                          </span>
                         </div>
                       </div>
                     ) : editingMessageId === message.messageId ? (
@@ -558,6 +580,7 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
                 ref={inputRef}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onFocus={() => setShouldAutoFocus(true)}
                 onKeyPress={(e) => {
                   if (e.key === "Enter" && !sending) {
                     sendMessage();

@@ -17,6 +17,7 @@ interface ChatColumnsProps {
   chatsData?: ChatsData | null;
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
   tagsVersion?: number;
+  onChatClosed?: () => void;
 }
 
 const columnsConfig = [
@@ -26,6 +27,15 @@ const columnsConfig = [
   { id: "repescagem", title: "Repescagem", color: "from-red-500 to-red-600" },
   { id: "tarefa", title: "Tarefa", color: "from-purple-500 to-purple-600" }
 ];
+
+const sortChatsByLastMessage = (chats: Chat[], sortOrder: "recent" | "oldest") => {
+  return [...chats].sort((a, b) => {
+    const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+    const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+    
+    return sortOrder === "recent" ? timeB - timeA : timeA - timeB;
+  });
+};
 
 interface ChatTagsModalProps {
   chat: Chat;
@@ -147,11 +157,16 @@ interface ChatColumnProps {
 }
 
 const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onRefresh }: ChatColumnProps) => {
-  const [sortOrder, setSortOrder] = useState<"recent" | "oldest">("recent");
+  const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
+    const saved = localStorage.getItem(`column-${id}-sortOrder`);
+    return (saved as "recent" | "oldest") || "recent";
+  });
+  
   const [showGroups, setShowGroups] = useState(() => {
     const saved = localStorage.getItem(`column-${id}-showGroups`);
     return saved !== null ? JSON.parse(saved) : true;
   });
+  
   const [showNewsletters, setShowNewsletters] = useState(() => {
     const saved = localStorage.getItem(`column-${id}-showNewsletters`);
     return saved !== null ? JSON.parse(saved) : true;
@@ -164,6 +179,10 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   useEffect(() => {
     localStorage.setItem(`column-${id}-showNewsletters`, JSON.stringify(showNewsletters));
   }, [showNewsletters, id]);
+
+  useEffect(() => {
+    localStorage.setItem(`column-${id}-sortOrder`, sortOrder);
+  }, [sortOrder, id]);
 
   const formatTime = (timeString: string | null) => {
     if (!timeString) return "";
@@ -180,17 +199,20 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     return chat.phone.includes("newsletter") || chat.phone.length > 20;
   };
 
+  // ✅ NOVA FUNÇÃO: Truncar última mensagem
+  const truncateMessage = (message: string | null, maxLength: number = 40) => {
+    if (!message) return "Sem mensagens";
+    if (message.length <= maxLength) return message;
+    return message.substring(0, maxLength) + "...";
+  };
+
   const filteredChats = chats.filter(chat => {
     if (!showGroups && chat.isGroup) return false;
     if (!showNewsletters && isNewsletter(chat)) return false;
     return true;
   });
 
-  const sortedChats = [...filteredChats].sort((a, b) => {
-    const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
-    const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
-    return sortOrder === "recent" ? timeB - timeA : timeA - timeB;
-  });
+  const sortedChats = sortChatsByLastMessage(filteredChats, sortOrder);
 
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === "recent" ? "oldest" : "recent");
@@ -299,8 +321,10 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      className={`group relative bg-white p-3 rounded-lg border border-gray-100 transition-all cursor-pointer ${
-                        chat.unread > 0 ? 'shadow-lg ring-2 ring-green-400' : 'hover:shadow-card'
+                      className={`group relative bg-white p-3 rounded-lg border transition-all cursor-pointer ${
+                        chat.unread > 0 
+                          ? 'bg-green-50/30 border-green-200 shadow-lg ring-2 ring-green-400/50' 
+                          : 'border-gray-100 hover:shadow-card'
                       }`}
                     >
                       <div className="flex items-start justify-between">
@@ -321,13 +345,11 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                                   {getInitials(chat.name)}
                                 </div>
                               )}
+                              
                               {chat.unread > 0 && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className="absolute -top-1 -right-1 bg-primary text-white text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center"
-                                >
-                                  {chat.unread}
-                                </Badge>
+                                <div className="absolute -top-1 -left-1 bg-green-500 text-white text-[10px] font-bold h-5 min-w-[20px] rounded-full flex items-center justify-center px-1 shadow-lg ring-2 ring-white">
+                                  {chat.unread > 99 ? '99+' : chat.unread}
+                                </div>
                               )}
                             </div>
                             
@@ -340,8 +362,13 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                                   {formatTime(chat.lastMessageTime)}
                                 </span>
                               </div>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {chat.phone}
+                              {/* ✅ CORRIGIDO: Mostra última mensagem ao invés do telefone */}
+                              <p className={`text-xs truncate ${
+                                chat.unread > 0 
+                                  ? 'font-semibold text-gray-900' 
+                                  : 'text-muted-foreground'
+                              }`}>
+                                {truncateMessage(chat.lastMessageContent)}
                               </p>
                             </div>
                           </div>
@@ -380,15 +407,16 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
 
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <MoreVertical className="h-3 w-3" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem 
                               onClick={() => onOpenTagManager(chat)}
                               className="text-xs"
@@ -396,10 +424,8 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                               <TagIcon className="mr-2 h-3 w-3" />
                               Gerenciar Etiquetas
                             </DropdownMenuItem>
-                            
                             <DropdownMenuSeparator />
-                            
-                            <DropdownMenuItem className="text-xs font-medium text-muted-foreground cursor-default">
+                            <DropdownMenuItem disabled className="text-xs">
                               <MoveRight className="mr-2 h-3 w-3" />
                               Mover para Coluna
                             </DropdownMenuItem>
@@ -437,7 +463,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   );
 };
 
-const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) => {
+const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed }: ChatColumnsProps) => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatForTagManager, setChatForTagManager] = useState<Chat | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
@@ -489,6 +515,10 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
 
         const targetColumn = columnMap[chat.column] || 'inicial';
         organized[targetColumn].push(chat);
+      });
+
+      Object.keys(organized).forEach(column => {
+        organized[column] = sortChatsByLastMessage(organized[column], "recent");
       });
 
       setChats(organized);
@@ -596,6 +626,10 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
               organized[targetColumn].push(chat);
             });
 
+            Object.keys(organized).forEach(column => {
+              organized[column] = sortChatsByLastMessage(organized[column], "recent");
+            });
+
             setChats(organized);
           }
         } catch (error) {
@@ -603,6 +637,11 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
         }
       }
     }
+  };
+
+  const handleCloseChat = () => {
+    setSelectedChat(null);
+    onChatClosed?.();
   };
 
   if (!chatsData) {
@@ -640,7 +679,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
           {selectedChat && (
             <div 
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-              onClick={() => setSelectedChat(null)}
+              onClick={handleCloseChat}
             >
               <div 
                 className="w-full max-w-2xl h-[80vh] mx-4 animate-in fade-in zoom-in-95 duration-200"
@@ -648,7 +687,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion }: ChatColumnsProps) =>
               >
                 <ChatWindow
                   chat={selectedChat}
-                  onClose={() => setSelectedChat(null)}
+                  onClose={handleCloseChat}
                 />
               </div>
             </div>

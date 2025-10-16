@@ -24,6 +24,7 @@ import Toast from "@/components/Toast";
 import LoadingChats from "./LoadingChats";
 import type { ChatsData } from "@/types/chat";
 import { buildUrl } from "@/lib/api";
+import { useNotifications, NewMessageNotification, ChatUpdateNotification, TagUpdateNotification, TagDeleteNotification } from "@/hooks/useNotifications";
 
 interface DashboardData {
   user: {
@@ -156,7 +157,7 @@ const SettingsPanel: React.FC<{
     }
 
     try {
-  const response = await fetch(buildUrl('/api/profile/update-name'), {
+      const response = await fetch(buildUrl('/api/profile/update-name'), {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -197,7 +198,7 @@ const SettingsPanel: React.FC<{
     }
 
     try {
-  const response = await fetch(buildUrl('/api/profile/request-email-change'), {
+      const response = await fetch(buildUrl('/api/profile/request-email-change'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -225,7 +226,7 @@ const SettingsPanel: React.FC<{
     const token = localStorage.getItem("token");
 
     try {
-  const response = await fetch(buildUrl('/api/profile/confirm-email-change'), {
+      const response = await fetch(buildUrl('/api/profile/confirm-email-change'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -263,7 +264,7 @@ const SettingsPanel: React.FC<{
     }
 
     try {
-  const response = await fetch(buildUrl('/api/profile/request-password-change'), {
+      const response = await fetch(buildUrl('/api/profile/request-password-change'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -291,7 +292,7 @@ const SettingsPanel: React.FC<{
     const token = localStorage.getItem("token");
 
     try {
-  const response = await fetch(buildUrl('/api/profile/confirm-password-change'), {
+      const response = await fetch(buildUrl('/api/profile/confirm-password-change'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -497,8 +498,14 @@ const Dashboard: React.FC = () => {
     return filtered;
   }, [chatsData, selectedTagIds]);
   
-  // ✅ Ref para controlar se a verificação inicial já foi feita
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
+  
   const hasCheckedInitialConnection = useRef(false);
+  
+  // ✅ NOVO: Refs para controle de debounce
+  const fetchChatsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchTimeRef = useRef<number>(0);
+  const minFetchInterval = 1000; // Mínimo de 1 segundo entre chamadas
 
   const showToast = useCallback(({ message, description, variant = "default" }: { message: string; description?: string; variant?: string }) => {
     setToast({ message, description, variant });
@@ -518,6 +525,157 @@ const Dashboard: React.FC = () => {
     setDashboardData(updatedData);
   }, []);
 
+  // ✅ Buscar chats (com suporte a reload silencioso)
+  const fetchChats = useCallback(async (silent = false) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(buildUrl('/dashboard/zapi/chats'), {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setChatsData(data);
+        
+        if (!silent) {
+          showToast({
+            message: `${data.totalChats} conversas carregadas`,
+            description: data.unreadCount > 0 ? `${data.unreadCount} não lidas` : "Todas lidas",
+          });
+        }
+      } else {
+        if (!silent) {
+          showToast({
+            message: "Erro ao carregar conversas",
+            description: data.message,
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao buscar chats:", error);
+      if (!silent) {
+        showToast({
+          message: "Erro de conexão",
+          description: "Não foi possível carregar as conversas",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [showToast]);
+
+  // ✅ NOVO: Debounced fetch para evitar chamadas excessivas
+  const debouncedFetchChats = useCallback((silent: boolean = false, delay: number = 500) => {
+    // Limpar timeout anterior
+    if (fetchChatsTimeoutRef.current) {
+      clearTimeout(fetchChatsTimeoutRef.current);
+    }
+
+    // Verificar intervalo mínimo desde a última chamada
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    
+    if (timeSinceLastFetch < minFetchInterval) {
+      console.log('⏳ Fetch bloqueado - aguardando intervalo mínimo');
+      return;
+    }
+
+    // Agendar nova chamada com debounce
+    fetchChatsTimeoutRef.current = setTimeout(() => {
+      lastFetchTimeRef.current = Date.now();
+      fetchChats(silent);
+    }, delay);
+  }, [fetchChats, minFetchInterval]);
+
+  // ✅ NOVO: Callback para recarregar chats silenciosamente ao fechar ChatWindow
+  const reloadChats = useCallback(() => {
+    console.log("🔄 Recarregando chats após fechar ChatWindow");
+    debouncedFetchChats(true, 300);
+  }, [debouncedFetchChats]);
+
+  // ✅ CORRIGIDO: Callback para processar novas mensagens recebidas via SSE (fromMe: false)
+  const handleNewMessage = useCallback((data: NewMessageNotification) => {
+    console.log('📨 Nova mensagem recebida via SSE:', {
+      chatId: data.chatId,
+      chatName: data.chatName,
+      message: data.message.substring(0, 30) + '...',
+      unreadCount: data.unreadCount
+    });
+    
+    showToast({
+      message: `Nova mensagem de ${data.chatName}`,
+      description: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : ''),
+      variant: "default"
+    });
+
+    // ✅ Usar debounced fetch para evitar múltiplas chamadas
+    if (isConnected && chatsData) {
+      debouncedFetchChats(true, 500);
+    }
+  }, [isConnected, chatsData, showToast, debouncedFetchChats]);
+
+  // ✅ CORRIGIDO: Callback para processar atualizações de chat via SSE (fromMe: true)
+  const handleChatUpdate = useCallback((data: ChatUpdateNotification) => {
+    console.log('🔄 Atualização de chat via SSE (mensagem enviada):', {
+      chatId: data.chatId,
+      chatName: data.chatName,
+      lastMessageContent: data.lastMessageContent?.substring(0, 30) + '...'
+    });
+    
+    // ✅ Atualizar chats silenciosamente com debounce (sem toast, sem som)
+    if (isConnected && chatsData) {
+      debouncedFetchChats(true, 500);
+    }
+  }, [isConnected, chatsData, debouncedFetchChats]);
+
+  // ✅ CORRIGIDO: Callback para processar atualização de tag via SSE
+  const handleTagUpdate = useCallback((data: TagUpdateNotification) => {
+    console.log('🏷️ Atualização de tag via SSE:', data);
+    
+    // Recarregar chats silenciosamente para atualizar as tags nos chats
+    if (isConnected && chatsData) {
+      debouncedFetchChats(true, 500);
+    }
+    
+    // Incrementar versão das tags para forçar re-render do TagManager se estiver aberto
+    setTagsVersion(prev => prev + 1);
+  }, [isConnected, chatsData, debouncedFetchChats]);
+
+  // ✅ CORRIGIDO: Callback para processar exclusão de tag via SSE
+  const handleTagDelete = useCallback((data: TagDeleteNotification) => {
+    console.log('🗑️ Exclusão de tag via SSE:', data);
+    
+    // Recarregar chats silenciosamente para remover tags excluídas dos chats
+    if (isConnected && chatsData) {
+      debouncedFetchChats(true, 500);
+    }
+    
+    // Incrementar versão das tags para forçar re-render do TagManager se estiver aberto
+    setTagsVersion(prev => prev + 1);
+  }, [isConnected, chatsData, debouncedFetchChats]);
+
+  // ✅ Conectar ao sistema de notificações SSE com handlers
+  useNotifications({
+    onNewMessage: handleNewMessage,
+    onChatUpdate: handleChatUpdate,
+    onTagUpdate: handleTagUpdate,
+    onTagDelete: handleTagDelete,
+    onConnected: () => {
+      console.log('✅ Sistema de notificações ativo');
+      setNotificationEnabled(true);
+    },
+    onError: (error) => {
+      console.error('❌ Erro no sistema de notificações:', error);
+      setNotificationEnabled(false);
+    }
+  });
+
   useEffect(() => {
     const validateSession = async () => {
       const token = localStorage.getItem("token");
@@ -529,7 +687,7 @@ const Dashboard: React.FC = () => {
       }
 
       try {
-  const response = await fetch(buildUrl(`/dashboard?userId=${userId}`), {
+        const response = await fetch(buildUrl(`/dashboard?userId=${userId}`), {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -656,7 +814,7 @@ const Dashboard: React.FC = () => {
       }
 
       try {
-  const response = await fetch(buildUrl('/dashboard/zapi/status'), {
+        const response = await fetch(buildUrl('/dashboard/zapi/status'), {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -705,7 +863,6 @@ const Dashboard: React.FC = () => {
       }
     };
 
-    // ✅ Só executa a verificação de conexão uma vez, na primeira vez que dashboardData está disponível
     if (dashboardData && !hasCheckedInitialConnection.current) {
       hasCheckedInitialConnection.current = true;
       checkExistingConnection();
@@ -720,7 +877,7 @@ const Dashboard: React.FC = () => {
       if (!token) return;
 
       try {
-  const response = await fetch(buildUrl('/dashboard/zapi/status'), {
+        const response = await fetch(buildUrl('/dashboard/zapi/status'), {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -751,6 +908,15 @@ const Dashboard: React.FC = () => {
 
     return () => clearInterval(checkConnectionInterval);
   }, [isConnected, chatsData, showToast]);
+
+  // Cleanup de timeouts ao desmontar
+  useEffect(() => {
+    return () => {
+      if (fetchChatsTimeoutRef.current) {
+        clearTimeout(fetchChatsTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!dashboardData) {
     return (
@@ -886,8 +1052,10 @@ const Dashboard: React.FC = () => {
                 chatsData={filteredChatsData} 
                 showToast={showToast} 
                 tagsVersion={tagsVersion}
+                onChatClosed={reloadChats}
               />
             </div>
+            
           )}
         </main>
 
