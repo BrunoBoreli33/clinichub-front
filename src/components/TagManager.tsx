@@ -58,7 +58,6 @@ const createTagAPI = async (tagData: { name: string; color: string }): Promise<T
   const data = await response.json();
 
   if (!response.ok || !data.success) {
-    // Capturar mensagem de validação do backend
     throw new Error(data.message || "Erro ao criar etiqueta");
   }
 
@@ -75,7 +74,6 @@ const updateTagAPI = async (tagId: string, tagData: { name: string; color: strin
   const data = await response.json();
 
   if (!response.ok || !data.success) {
-    // Capturar mensagem de validação do backend
     throw new Error(data.message || "Erro ao atualizar etiqueta");
   }
 
@@ -134,7 +132,6 @@ const TagManager = ({ onClose, onTagsUpdated }: TagManagerProps) => {
       return;
     }
 
-    // ✅ VALIDAÇÃO: Nome deve ter entre 2 e 50 caracteres
     if (newTagName.trim().length < 2) {
       toast({
         title: "Nome muito curto",
@@ -193,7 +190,6 @@ const TagManager = ({ onClose, onTagsUpdated }: TagManagerProps) => {
   const updateTag = async () => {
     if (!editingTag || !newTagName.trim()) return;
 
-    // ✅ VALIDAÇÃO: Nome deve ter entre 2 e 50 caracteres
     if (newTagName.trim().length < 2) {
       toast({
         title: "Nome muito curto",
@@ -364,7 +360,12 @@ const TagManager = ({ onClose, onTagsUpdated }: TagManagerProps) => {
               tags.map(tag => (
                 <div
                   key={tag.id}
-                  className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-white/20"
+                  // ✅ MODIFICAÇÃO 3: Destacar visualmente a etiqueta sendo editada
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                    editingTag?.id === tag.id
+                      ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-400/50 shadow-md'
+                      : 'bg-white/50 border-white/20'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -381,6 +382,12 @@ const TagManager = ({ onClose, onTagsUpdated }: TagManagerProps) => {
                     >
                       {tag.name}
                     </Badge>
+                    {/* ✅ Indicador visual adicional quando está editando */}
+                    {editingTag?.id === tag.id && (
+                      <Badge className="bg-blue-500 text-white text-xs">
+                        Editando
+                      </Badge>
+                    )}
                   </div>
                   
                   <div className="flex gap-1">
@@ -389,7 +396,9 @@ const TagManager = ({ onClose, onTagsUpdated }: TagManagerProps) => {
                       size="sm"
                       onClick={() => startEdit(tag)}
                       disabled={isSaving}
-                      className="h-8 w-8 p-0"
+                      className={`h-8 w-8 p-0 ${
+                        editingTag?.id === tag.id ? 'bg-blue-100 text-blue-600' : ''
+                      }`}
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
