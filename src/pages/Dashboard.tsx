@@ -13,6 +13,7 @@ import {
   User,
   MessageCircle,
   File,
+  Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
@@ -488,15 +489,44 @@ const Dashboard: React.FC = () => {
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const [availableTags, setAvailableTags] = useState<Array<{ id: string; name: string; color: string }>>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
 
   // Memoized filtered chats — must be declared unconditionally to respect Rules of Hooks
+  const normalizeDigits = (s?: string) => (s || "").replace(/\D/g, "");
+
+  // debounce searchTerm -> debouncedSearchTerm
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearchTerm(searchTerm.trim()), 300);
+    return () => clearTimeout(id);
+  }, [searchTerm]);
+
   const filteredChatsData = React.useMemo(() => {
     if (!chatsData) return chatsData;
-    if (selectedTagIds.size === 0) return chatsData;
 
-    const filtered = { ...chatsData, chats: chatsData.chats.filter(chat => chat.tags.some(t => selectedTagIds.has(t.id))) };
-    return filtered;
-  }, [chatsData, selectedTagIds]);
+    const tagFiltered = selectedTagIds.size === 0
+      ? chatsData.chats
+      : chatsData.chats.filter(chat => chat.tags.some(t => selectedTagIds.has(t.id)));
+
+    const term = debouncedSearchTerm.toLowerCase();
+    if (!term) return { ...chatsData, chats: tagFiltered };
+
+    const digitsTerm = normalizeDigits(term);
+
+    const searched = tagFiltered.filter(chat => {
+      const name = (chat.name || "").toLowerCase();
+      const phone = (chat.phone || "").toLowerCase();
+      const phoneDigits = normalizeDigits(chat.phone || "");
+
+      // match name contains term OR phone contains term OR phone digits contains digitsTerm
+      if (name.includes(term)) return true;
+      if (phone.includes(term)) return true;
+      if (digitsTerm && phoneDigits.includes(digitsTerm)) return true;
+      return false;
+    });
+
+    return { ...chatsData, chats: searched };
+  }, [chatsData, selectedTagIds, debouncedSearchTerm]);
   
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   
@@ -1010,33 +1040,52 @@ const Dashboard: React.FC = () => {
           ) : (
             <div className="w-full max-w-6xl">
               <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={clearTagSelection}
-                    className={`px-3 py-1 rounded-full text-sm ${selectedTagIds.size === 0 ? 'bg-green-600 text-white' : 'bg-white border'}`}
-                  >
-                    Todas
-                  </button>
-                  {availableTags.map(tag => {
-                    const selected = selectedTagIds.has(tag.id);
-                    return (
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="relative w-full max-w-lg">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Pesquisar por nome ou telefone..."
+                      className="pl-10 pr-10"
+                    />
+                    {searchTerm && (
                       <button
-                        key={tag.id}
-                        onClick={() => toggleTagSelection(tag.id)}
-                        className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 border ${selected ? '' : 'bg-white'}`}
-                        style={selected ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-gray-700"
+                        aria-label="Limpar busca"
                       >
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                        {tag.name}
+                        <X className="w-4 h-4" />
                       </button>
-                    );
-                  })}
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                    <button
+                      onClick={clearTagSelection}
+                      className={`flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium ${selectedTagIds.size === 0 ? 'bg-green-600 text-white' : 'bg-white border'}`}
+                    >
+                      <span className="hidden sm:inline">Todas</span>
+                    </button>
+
+                    {availableTags.map(tag => {
+                      const selected = selectedTagIds.has(tag.id);
+                      return (
+                        <button
+                          key={tag.id}
+                          onClick={() => toggleTagSelection(tag.id)}
+                          className={`flex items-center gap-2 px-2 py-0.5 rounded-full text-xs border ${selected ? '' : 'bg-white'}`}
+                          style={selected ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
+                        >
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                          <span className="truncate max-w-[8rem]">{tag.name}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="ml-auto">
+                <div className="ml-auto flex-shrink-0">
                   <button
                     onClick={exportFilteredToCSV}
                     className="flex items-center gap-2 px-3 py-1 rounded-md bg-white border hover:bg-gray-50"
