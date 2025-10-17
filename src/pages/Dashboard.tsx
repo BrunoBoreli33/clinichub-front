@@ -325,7 +325,7 @@ const SettingsPanel: React.FC<{
       <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
         <div className="absolute inset-0 bg-black/30" onClick={() => setShowAccountInfo(false)} />
 
-        <div className="relative bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 z-10 mt-20 max-h-[90vh] overflow-y-auto">
+  <div className="relative bg-base-100 rounded-lg shadow-lg max-w-full sm:max-w-2xl w-full p-6 z-10 mt-20 max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-800">Informações da Conta</h2>
             <button className="p-2 rounded-md hover:bg-gray-100" onClick={() => setShowAccountInfo(false)} aria-label="Voltar">
@@ -442,9 +442,9 @@ const SettingsPanel: React.FC<{
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-lg max-w-3xl w-full p-6 z-10 mt-20">
+  <div className="relative bg-base-100 rounded-lg shadow-lg max-w-full sm:max-w-3xl w-full p-6 z-10 mt-20">
         <div className="flex items-start justify-between">
           <h2 className="text-2xl font-bold text-gray-800">Configurações</h2>
           <button className="p-2 rounded-md hover:bg-gray-100" onClick={onClose} aria-label="Fechar">
@@ -997,13 +997,24 @@ const Dashboard: React.FC = () => {
       />
 
       <div className="flex-1 flex flex-col">
-        <header className="bg-white border-b border-gray-200 relative">
-          <div className="px-4 py-3 flex items-center">
-            <button className="ml-6 p-2" onClick={() => setShowSidebar(true)} aria-label="Abrir menu">
+        <header className="bg-base-100 border-b border-base-200 relative">
+          <div className="px-2 sm:px-4 py-3 flex items-center">
+            <button className="ml-2 sm:ml-6 p-2" onClick={() => setShowSidebar(true)} aria-label="Abrir menu">
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
 
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
+            {/* Mobile compact title */}
+            <div className="flex items-center gap-3 sm:hidden ml-2">
+              <div className="p-1 bg-gradient-to-b from-green-400 to-green-600 rounded-md flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <h1 className="text-sm font-semibold text-[#1a1a1a]">WhatsApp Monitor</h1>
+              </div>
+            </div>
+
+            {/* Desktop/Tablet centered title */}
+            <div className="hidden sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex sm:items-center sm:gap-3">
               <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>

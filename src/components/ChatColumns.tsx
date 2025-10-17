@@ -221,7 +221,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   };
 
   return (
-    <Card className="w-80 h-full bg-gradient-card border-0 shadow-card flex flex-col">
+  <Card className="w-full sm:w-80 h-full bg-gradient-card border-0 shadow-card flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className={`text-base font-bold bg-gradient-to-r ${color} bg-clip-text text-transparent`}>
@@ -664,31 +664,34 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed }: ChatCo
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 h-[calc(100vh-120px)] justify-center">
-          <div className="flex gap-4 justify-center">
-            {columnsConfig.map(column => (
-              <ChatColumn
-                key={column.id}
-                id={column.id}
-                title={column.title}
-                color={column.color}
-                chats={chats[column.id] || []}
-                availableTags={availableTags}
-                onChatSelect={setSelectedChat}
-                onMoveChat={moveChat}
-                onOpenTagManager={setChatForTagManager}
-                onRefresh={loadTags}
-              />
-            ))}
+        <div className="w-full">
+          {/* Responsive columns: horizontal scroll on small screens, grid on larger */}
+          <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 px-2 sm:overflow-visible sm:flex-wrap h-[calc(100vh-120px)] sm:h-auto">
+            <div className="flex gap-4">
+              {columnsConfig.map(column => (
+                <ChatColumn
+                  key={column.id}
+                  id={column.id}
+                  title={column.title}
+                  color={column.color}
+                  chats={chats[column.id] || []}
+                  availableTags={availableTags}
+                  onChatSelect={setSelectedChat}
+                  onMoveChat={moveChat}
+                  onOpenTagManager={setChatForTagManager}
+                  onRefresh={loadTags}
+                />
+              ))}
+            </div>
           </div>
 
           {selectedChat && (
             <div 
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-8"
               onClick={handleCloseChat}
             >
               <div 
-                className="w-full max-w-2xl h-[80vh] mx-4 animate-in fade-in zoom-in-95 duration-200"
+                className="w-full max-w-2xl h-[90vh] sm:h-[80vh] mx-2 sm:mx-4 animate-in fade-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
               >
                 <ChatWindow
