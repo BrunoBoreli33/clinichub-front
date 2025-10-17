@@ -629,7 +629,7 @@ const Dashboard: React.FC = () => {
     debouncedFetchChats(true, 300);
   }, [debouncedFetchChats]);
 
-  // ✅ CORRIGIDO: Callback para processar novas mensagens recebidas via SSE (fromMe: false)
+  // ✅ MODIFICADO: Callback para processar novas mensagens - SEM TOAST (já mostrado no useNotifications)
   const handleNewMessage = useCallback((data: NewMessageNotification) => {
     console.log('📨 Nova mensagem recebida via SSE:', {
       chatId: data.chatId,
@@ -638,12 +638,8 @@ const Dashboard: React.FC = () => {
       unreadCount: data.unreadCount
     });
     
-    showToast({
-      message: `Nova mensagem de ${data.chatName}`,
-      description: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : ''),
-      variant: "default"
-    });
-
+    // ✅ REMOVIDO: Toast daqui - já mostrado no useNotifications quando nenhum chat está aberto
+    
     // ✅ Usar debounced fetch para evitar múltiplas chamadas
     if (isConnected && chatsData) {
       debouncedFetchChats(true, 500);
@@ -653,7 +649,7 @@ const Dashboard: React.FC = () => {
     window.dispatchEvent(new CustomEvent('sse-new-message', {
       detail: { type: 'new-message', data }
     }));
-  }, [isConnected, chatsData, showToast, debouncedFetchChats]);
+  }, [isConnected, chatsData, debouncedFetchChats]);
 
   // ✅ CORRIGIDO: Callback para processar atualizações de chat via SSE (fromMe: true)
   const handleChatUpdate = useCallback((data: ChatUpdateNotification) => {
@@ -700,8 +696,8 @@ const Dashboard: React.FC = () => {
     setTagsVersion(prev => prev + 1);
   }, [isConnected, chatsData, debouncedFetchChats]);
 
-  // ✅ Conectar ao sistema de notificações SSE com handlers
-  useNotifications({
+// ✅ MODIFICADO: Conectar ao sistema de notificações SSE com setOpenChatId
+  const { setOpenChatId } = useNotifications({
     onNewMessage: handleNewMessage,
     onChatUpdate: handleChatUpdate,
     onTagUpdate: handleTagUpdate,
@@ -1123,6 +1119,7 @@ const Dashboard: React.FC = () => {
                 showToast={showToast} 
                 tagsVersion={tagsVersion}
                 onChatClosed={reloadChats}
+                setOpenChatId={setOpenChatId}
               />
             </div>
             
