@@ -49,6 +49,10 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
   // ✅ Armazenar callbacks em refs para evitar reconexões desnecessárias
   const callbacksRef = useRef(options);
   
+  // ✅ NOVO: Controlar se ALGUM chat está aberto
+  const openChatIdRef = useRef<string | null>(null);
+  const isAnyChatOpenRef = useRef<boolean>(false);
+  
   // ✅ Atualizar refs quando callbacks mudarem
   useEffect(() => {
     callbacksRef.current = options;
@@ -74,6 +78,13 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
         clearInterval(cleanupIntervalRef.current);
       }
     };
+  }, []);
+
+  // ✅ NOVA FUNÇÃO: Controlar quando um chat é aberto/fechado
+  const setOpenChatId = useCallback((chatId: string | null) => {
+    openChatIdRef.current = chatId;
+    isAnyChatOpenRef.current = chatId !== null;
+    console.log(`📂 Chat ${chatId ? 'ABERTO' : 'FECHADO'}: ${chatId || 'nenhum'}`);
   }, []);
 
   // ✅ Verificar se mensagem já foi processada
@@ -168,16 +179,24 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
         console.log('📢 SSE conectado:', JSON.parse(event.data));
       });
 
-      // ✅ Evento de nova mensagem RECEBIDA (com som - 1 vez apenas)
+      // ✅ MODIFICADO: Evento de nova mensagem RECEBIDA
       eventSource.addEventListener('new-message', (event) => {
         try {
           const data: NewMessageNotification = JSON.parse(event.data);
           console.log('📨 Nova mensagem recebida via SSE:', data);
 
-          // ✅ Tocar som apenas se não foi processada (controle de duplicatas)
-          playNotificationSound(data.chatId, data.message, data.lastMessageTime || undefined);
+          // ✅ CRÍTICO: Verificar se ALGUM chat está aberto
+          const isAnyChatOpen = isAnyChatOpenRef.current;
+          
+          if (!isAnyChatOpen) {
+            // ✅ Tocar som APENAS se NENHUM chat estiver aberto
+            playNotificationSound(data.chatId, data.message, data.lastMessageTime || undefined);
+            console.log('🔊 Som tocado - nenhum chat aberto');
+          } else {
+            console.log('🔇 Notificação suprimida - há um chat aberto');
+          }
 
-          // Chamar callback
+          // ✅ SEMPRE chamar callback (para atualizar lista de chats)
           callbacksRef.current.onNewMessage?.(data);
 
         } catch (error) {
@@ -245,7 +264,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       console.error('❌ Erro ao conectar SSE:', error);
       callbacksRef.current.onError?.(error as Error);
     }
-  }, [playNotificationSound]); // ✅ Removido 'options' das dependências
+  }, [playNotificationSound]);
 
   const disconnect = useCallback(() => {
     console.log('🔌 Desconectando SSE...');
@@ -276,6 +295,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
   return {
     connect,
     disconnect,
+    setOpenChatId, // ✅ NOVO: Exportar função para controlar chat aberto
     isConnected: eventSourceRef.current !== null && eventSourceRef.current.readyState === EventSource.OPEN,
   };
 };

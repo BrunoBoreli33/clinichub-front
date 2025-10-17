@@ -7,7 +7,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause } from "lucide-react";
 import { buildUrl } from "@/lib/api";
 import EmojiPicker from "./EmojiPicker";
-import AudioRecorder from "./AudioRecorder";
 
 interface Tag {
   id: string;
@@ -45,9 +44,10 @@ interface Chat {
 interface ChatWindowProps {
   chat: Chat;
   onClose: () => void;
+  setOpenChatId?: (chatId: string | null) => void;
 }
 
-const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
+const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,8 +62,8 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isInitialLoadRef = useRef(true);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ CORRIGIDO: Scroll inicial garantido com useLayoutEffect (antes da renderização)
   useLayoutEffect(() => {
     if (isInitialLoadRef.current && messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
@@ -71,7 +71,6 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
     }
   }, [messages]);
 
-  // Auto-focus e scroll suave após carregamento inicial
   useEffect(() => {
     if (!isInitialLoadRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -83,6 +82,17 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
       }, 100);
     }
   }, [messages.length, editingMessageId, shouldAutoFocus]);
+
+  // ✅ Notificar quando chat abre/fecha
+  useEffect(() => {
+    setOpenChatId?.(chat.id);
+    console.log('📂 ChatWindow ABERTO - Chat ID:', chat.id);
+
+    return () => {
+      setOpenChatId?.(null);
+      console.log('📂 ChatWindow FECHADO');
+    };
+  }, [chat.id, setOpenChatId]);
 
   const markChatAsRead = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -105,16 +115,20 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
     }
   }, [chat.id]);
 
+  // ✅ MODIFICADO: loadMessages com cache busting e retry logic
   const loadMessages = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch(buildUrl(`/dashboard/messages/${chat.id}`), {
+      // ✅ Cache busting com timestamp
+      const timestamp = Date.now();
+      const response = await fetch(buildUrl(`/dashboard/messages/${chat.id}?t=${timestamp}`), {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
+        cache: "no-cache", // ✅ Forçar bypass do cache
       });
 
       const text = await response.text();
@@ -144,30 +158,59 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
     markChatAsRead();
   }, [markChatAsRead]);
 
-  // ✅ NOVO: Marcar como lido ao FECHAR o chat também
+  // ✅ Marcar como lido ao FECHAR o chat também
   useEffect(() => {
     return () => {
-      // Cleanup: marcar como lido ao desmontar o componente
       markChatAsRead();
     };
   }, [markChatAsRead]);
 
-  // ✅ CRÍTICO: Listener para eventos SSE do Dashboard
+  // ✅ NOVO: Polling inteligente a cada 2 segundos quando chat está aberto
+  useEffect(() => {
+    if (!chat.id) return;
+
+    console.log('🔄 Iniciando polling para chat:', chat.id);
+
+    // Polling a cada 2 segundos
+    pollingIntervalRef.current = setInterval(() => {
+      loadMessages(true);
+    }, 2000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        console.log('⏹️ Parando polling para chat:', chat.id);
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [chat.id, loadMessages]);
+
+  // ✅ MODIFICADO: Listener SSE com retry múltiplo
   useEffect(() => {
     const handleSSEMessage = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { type, data } = customEvent.detail;
       
-      // Verificar se o evento é para este chat
       if (data.chatId !== chat.id) return;
       
-      console.log(`📨 Evento SSE recebido no ChatWindow - Tipo: ${type}, ChatId: ${data.chatId}`);
+      console.log(`📨 Evento SSE no ChatWindow - Tipo: ${type}, ChatId: ${data.chatId}`);
       
-      // Recarregar mensagens silenciosamente
-      loadMessages(true);
+      // ✅ CRÍTICO: Múltiplas tentativas de reload com delays
+      loadMessages(true); // Tentativa imediata
+      
+      setTimeout(() => {
+        loadMessages(true); // Retry após 300ms
+      }, 300);
+      
+      setTimeout(() => {
+        loadMessages(true); // Retry após 800ms
+      }, 800);
+      
+      setTimeout(() => {
+        loadMessages(true); // Retry final após 1.5s
+      }, 1500);
     };
 
-    // Escutar eventos personalizados
     window.addEventListener('sse-new-message', handleSSEMessage);
     window.addEventListener('sse-chat-update', handleSSEMessage);
 
@@ -277,73 +320,6 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
     }
   };
 
-  const sendAudio = async (audioBase64: string, duration: number) => {
-    const tempId = `temp_audio_${Date.now()}`;
-
-    const optimisticAudio: Message = {
-      id: tempId,
-      messageId: tempId,
-      content: "🎤 Áudio",
-      type: "audio",
-      audioUrl: audioBase64,
-      audioDuration: duration,
-      timestamp: new Date().toISOString(),
-      fromMe: true,
-      status: "SENDING",
-      isEdited: false,
-    };
-
-    setMessages(prev => [...prev, optimisticAudio]);
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-
-    setSending(true);
-    const token = localStorage.getItem("token");
-
-    try {
-      const body = {
-        chatId: chat.id,
-        phone: chat.phone,
-        audio: audioBase64,
-        duration: duration,
-        waveform: true,
-      };
-
-      const response = await fetch(buildUrl('/dashboard/messages/send-audio'), {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
-      const text = await response.text();
-      if (!response.ok) {
-        setMessages(prev => prev.filter(msg => msg.id !== tempId));
-        throw new Error(`Erro ${response.status}: ${text}`);
-      }
-
-      const data = JSON.parse(text);
-      if (data.success && data.data) {
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempId ? { 
-            ...msg, 
-            id: data.data.id, 
-            messageId: data.data.messageId, 
-            status: data.data.status || "SENT"
-          } : msg
-        ));
-      }
-    } catch (error) {
-      console.error("Erro ao enviar áudio:", error);
-      alert("Erro ao enviar áudio: " + (error as Error).message);
-    } finally {
-      setSending(false);
-    }
-  };
-
   const playAudio = (audioUrl: string, messageId: string) => {
     if (playingAudio === messageId) {
       audioRef.current?.pause();
@@ -433,47 +409,45 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
   return (
     <Card className="h-full bg-white border-0 shadow-2xl rounded-2xl flex flex-col overflow-hidden">
       <CardHeader className="pb-4 pt-5 px-6 border-b border-gray-100 bg-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {chat.profileThumbnail ? (
               <img
                 src={chat.profileThumbnail}
                 alt={chat.name}
-                className="w-12 h-12 rounded-full object-cover ring-2 ring-green-100"
+                className="w-12 h-12 rounded-full object-cover ring-2 ring-green-100 flex-shrink-0"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center text-white font-semibold text-lg ring-2 ring-green-100">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center text-white font-semibold text-lg ring-2 ring-green-100 flex-shrink-0">
                 {getInitials(chat.name)}
               </div>
             )}
-            <div>
-              <h3 className="font-semibold text-gray-900 text-lg">{chat.name}</h3>
-              <p className="text-xs text-gray-500">{chat.phone}</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-gray-900 text-lg truncate">{chat.name}</h3>
+              <p className="text-xs text-gray-500 truncate">{chat.phone}</p>
+              {chat.tags && chat.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {chat.tags.map((tag) => (
+                    <Badge
+                      key={tag.id}
+                      style={{ backgroundColor: tag.color }}
+                      className="text-white text-xs px-2 py-0.5"
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {chat.tags && chat.tags.length > 0 && (
-              <div className="flex gap-1">
-                {chat.tags.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    style={{ backgroundColor: tag.color }}
-                    className="text-white text-xs px-2 py-0.5"
-                  >
-                    {tag.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 rounded-full hover:bg-gray-100"
-            >
-              <X className="h-5 w-5 text-gray-500" />
-            </Button>
-          </div>
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 flex-shrink-0"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </Button>
         </div>
       </CardHeader>
 
@@ -623,21 +597,17 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
                 className="flex-1 rounded-full border-gray-200 focus:ring-2 focus:ring-green-500"
                 disabled={sending}
               />
-              {newMessage.trim() ? (
-                <Button
-                  onClick={sendMessage}
-                  className="rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 w-10 p-0"
-                  disabled={sending}
-                >
-                  {sending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              ) : (
-                <AudioRecorder onAudioRecorded={sendAudio} disabled={sending} />
-              )}
+              <Button
+                onClick={sendMessage}
+                className="rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 w-10 p-0"
+                disabled={sending || !newMessage.trim()}
+              >
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </div>
         </div>

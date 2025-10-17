@@ -18,6 +18,7 @@ interface ChatColumnsProps {
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
   tagsVersion?: number;
   onChatClosed?: () => void;
+  setOpenChatId?: (chatId: string | null) => void; // ✅ NOVO
 }
 
 const columnsConfig = [
@@ -469,7 +470,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   );
 };
 
-const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed }: ChatColumnsProps) => {
+const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenChatId }: ChatColumnsProps) => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatForTagManager, setChatForTagManager] = useState<Chat | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
@@ -694,6 +695,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed }: ChatCo
                 <ChatWindow
                   chat={selectedChat}
                   onClose={handleCloseChat}
+                  setOpenChatId={setOpenChatId}
                 />
               </div>
             </div>
