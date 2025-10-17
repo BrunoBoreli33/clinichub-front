@@ -97,8 +97,8 @@ const LoadingChats = ({ onLoadingComplete, totalChats }: LoadingChatsProps) => {
     // Primeira verificação imediata
     checkProgress();
 
-    // Polling a cada 500ms para atualização suave
-    pollingIntervalRef.current = setInterval(checkProgress, 500);
+    // Polling a cada 1000ms para atualização suave
+    pollingIntervalRef.current = setInterval(checkProgress, 1000);
 
     // Cleanup
     return () => {
