@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,41 +84,7 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
     }
   }, [messages.length, editingMessageId, shouldAutoFocus]);
 
-  // Carregar mensagens ao abrir chat
-  useEffect(() => {
-    loadMessages();
-  }, [chat.id]);
-
-  // ✅ Marcar chat como lido ao abrir
-  useEffect(() => {
-    markChatAsRead();
-  }, [chat.id]);
-
-  // Detectar cliques fora do input
-  useEffect(() => {
-    const messagesContainer = messagesContainerRef.current;
-    
-    const handleClickOutsideInput = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const clickedInput = inputRef.current?.contains(target);
-      
-      if (!clickedInput) {
-        setShouldAutoFocus(false);
-      }
-    };
-
-    if (messagesContainer) {
-      messagesContainer.addEventListener('mousedown', handleClickOutsideInput);
-    }
-
-    return () => {
-      if (messagesContainer) {
-        messagesContainer.removeEventListener('mousedown', handleClickOutsideInput);
-      }
-    };
-  }, []);
-
-  const markChatAsRead = async () => {
+  const markChatAsRead = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
@@ -137,9 +103,9 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
     } catch (error) {
       console.error("❌ Erro ao marcar chat como lido:", error);
     }
-  };
+  }, [chat.id]);
 
-  const loadMessages = async (silent = false) => {
+  const loadMessages = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     const token = localStorage.getItem("token");
 
@@ -166,7 +132,74 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [chat.id]);
+
+  // Carregar mensagens ao abrir chat
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  // ✅ Marcar chat como lido ao abrir
+  useEffect(() => {
+    markChatAsRead();
+  }, [markChatAsRead]);
+
+  // ✅ NOVO: Marcar como lido ao FECHAR o chat também
+  useEffect(() => {
+    return () => {
+      // Cleanup: marcar como lido ao desmontar o componente
+      markChatAsRead();
+    };
+  }, [markChatAsRead]);
+
+  // ✅ CRÍTICO: Listener para eventos SSE do Dashboard
+  useEffect(() => {
+    const handleSSEMessage = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { type, data } = customEvent.detail;
+      
+      // Verificar se o evento é para este chat
+      if (data.chatId !== chat.id) return;
+      
+      console.log(`📨 Evento SSE recebido no ChatWindow - Tipo: ${type}, ChatId: ${data.chatId}`);
+      
+      // Recarregar mensagens silenciosamente
+      loadMessages(true);
+    };
+
+    // Escutar eventos personalizados
+    window.addEventListener('sse-new-message', handleSSEMessage);
+    window.addEventListener('sse-chat-update', handleSSEMessage);
+
+    return () => {
+      window.removeEventListener('sse-new-message', handleSSEMessage);
+      window.removeEventListener('sse-chat-update', handleSSEMessage);
+    };
+  }, [chat.id, loadMessages]);
+
+  // Detectar cliques fora do input
+  useEffect(() => {
+    const messagesContainer = messagesContainerRef.current;
+    
+    const handleClickOutsideInput = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const clickedInput = inputRef.current?.contains(target);
+      
+      if (!clickedInput) {
+        setShouldAutoFocus(false);
+      }
+    };
+
+    if (messagesContainer) {
+      messagesContainer.addEventListener('mousedown', handleClickOutsideInput);
+    }
+
+    return () => {
+      if (messagesContainer) {
+        messagesContainer.removeEventListener('mousedown', handleClickOutsideInput);
+      }
+    };
+  }, []);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;

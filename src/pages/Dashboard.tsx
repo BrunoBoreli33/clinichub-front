@@ -648,6 +648,11 @@ const Dashboard: React.FC = () => {
     if (isConnected && chatsData) {
       debouncedFetchChats(true, 500);
     }
+
+    // ✅ CRÍTICO: Emitir evento para o ChatWindow
+    window.dispatchEvent(new CustomEvent('sse-new-message', {
+      detail: { type: 'new-message', data }
+    }));
   }, [isConnected, chatsData, showToast, debouncedFetchChats]);
 
   // ✅ CORRIGIDO: Callback para processar atualizações de chat via SSE (fromMe: true)
@@ -662,6 +667,11 @@ const Dashboard: React.FC = () => {
     if (isConnected && chatsData) {
       debouncedFetchChats(true, 500);
     }
+
+    // ✅ CRÍTICO: Emitir evento para o ChatWindow
+    window.dispatchEvent(new CustomEvent('sse-chat-update', {
+      detail: { type: 'chat-update', data }
+    }));
   }, [isConnected, chatsData, debouncedFetchChats]);
 
   // ✅ CORRIGIDO: Callback para processar atualização de tag via SSE
