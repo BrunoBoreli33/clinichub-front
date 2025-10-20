@@ -282,7 +282,7 @@ const TagManager = ({ onClose, onTagsUpdated }: TagManagerProps) => {
         </DialogHeader>
         
         <div className="space-y-6">
-          <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+          <div className="space-y-4 p-4 panel rounded-lg">
             <div className="space-y-2">
               <Label htmlFor="tagName">
                 {editingTag ? "Editar Etiqueta" : "Nova Etiqueta"}
@@ -363,8 +363,8 @@ const TagManager = ({ onClose, onTagsUpdated }: TagManagerProps) => {
                   // ✅ MODIFICAÇÃO 3: Destacar visualmente a etiqueta sendo editada
                   className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
                     editingTag?.id === tag.id
-                      ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-400/50 shadow-md'
-                      : 'bg-white/50 border-white/20'
+                      ? 'panel border-blue-300 ring-2 ring-blue-400/50 shadow-md'
+                      : 'panel border-border'
                   }`}
                 >
                   <div className="flex items-center gap-3">

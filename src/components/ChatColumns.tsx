@@ -94,7 +94,7 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
             availableTags.map(tag => (
               <div
                 key={tag.id}
-                className="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-white/20 cursor-pointer hover:bg-white/70 transition-colors"
+                className="flex items-center gap-3 p-3 panel rounded-lg border border-border cursor-pointer hover:shadow-card transition-all"
                 onClick={() => toggleTag(tag.id)}
               >
                 {/* ✅ MODIFICAÇÃO 1 CORRIGIDA: Checkbox sem onCheckedChange para evitar double toggle */}
@@ -313,8 +313,8 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
             ref={provided.innerRef}
             className={`flex-1 overflow-y-auto space-y-2 p-4 pt-0 transition-all duration-200 ${
               snapshot.isDraggingOver
-                ? 'bg-green-50/50 ring-2 ring-green-400 ring-inset rounded-lg'
-                : ''
+                ? 'panel ring-2 ring-green-400 ring-inset rounded-lg'
+                : 'panel'
             }`}
           >
             {sortedChats.length === 0 ? (
@@ -328,11 +328,11 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      className={`group relative bg-white p-3 rounded-lg border transition-all cursor-pointer ${
-                        chat.unread > 0 
-                          ? 'bg-green-50/30 border-green-200 shadow-lg ring-2 ring-green-400/50' 
-                          : 'border-gray-100 hover:shadow-card'
-                      }`}
+                      className={`group relative panel p-3 rounded-lg border transition-all cursor-pointer ${
+                          chat.unread > 0 
+                            ? 'border-green-200 shadow-lg ring-2 ring-green-400/50' 
+                            : 'border-border hover:shadow-card'
+                        }`}
                     >
                       <div className="flex items-start justify-between">
                         <div 

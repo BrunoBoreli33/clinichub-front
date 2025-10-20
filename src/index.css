@@ -131,3 +131,28 @@ All colors MUST be HSL.
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #5a6265;
 }
+
+/* Utility helpers for consistent panels and chat backgrounds */
+@layer components {
+  .panel {
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+  }
+
+  .panel-strong {
+    background: var(--gradient-card);
+  }
+
+  .chat-modal {
+    background: hsl(var(--card));
+    border-radius: calc(var(--radius) + 6px);
+    box-shadow: 0 30px 60px -30px hsl(var(--primary) / 0.12), 0 8px 24px -8px hsl(var(--primary) / 0.06);
+  }
+
+  /* Safe-bg forces solid card color when semi-transparent utilities would show through */
+  .safe-bg {
+    background: hsl(var(--card)) !important;
+  }
+}

@@ -398,8 +398,8 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
   };
 
   return (
-  <Card className="h-full bg-base-100 border-0 shadow-2xl rounded-2xl flex flex-col overflow-hidden">
-  <CardHeader className="pb-4 pt-5 px-4 sm:px-6 border-b border-base-200 bg-base-100">
+  <Card className="h-full panel border-0 shadow-2xl rounded-2xl flex flex-col overflow-hidden">
+  <CardHeader className="pb-4 pt-5 px-4 sm:px-6 border-b border-base-200 safe-bg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {chat.profileThumbnail ? (
@@ -448,7 +448,7 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
         <div className="flex-1 flex flex-col min-h-0">
           <div 
             ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 bg-base-100"
+            className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 safe-bg"
           >
             {loading ? (
               <div className="flex items-center justify-center h-full">
@@ -573,7 +573,7 @@ const ChatWindow = ({ chat, onClose }: ChatWindowProps) => {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-3 sm:p-4 bg-base-100 border-t border-base-200">
+          <div className="p-3 sm:p-4 safe-bg border-t border-base-200">
             <div className="flex items-center gap-2">
               <EmojiPicker onEmojiSelect={handleEmojiSelect} />
               <Input
