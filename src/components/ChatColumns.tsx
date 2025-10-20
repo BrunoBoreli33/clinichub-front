@@ -21,7 +21,6 @@ interface ChatColumnsProps {
   setOpenChatId?: (chatId: string | null) => void;
 }
 
-// ✅ MODIFICAÇÃO: Adicionadas as novas colunas Lead Quente e Lead Frio
 const columnsConfig = [
   { id: "vip", title: "Atendimento VIP", color: "from-orange-400 to-orange-500" },
   { id: "humanizado", title: "Atendimento Humanizado", color: "from-blue-500 to-blue-600" },
@@ -149,6 +148,9 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
   );
 };
 
+// ✅ REMOVIDA: Função de estilo permanente
+// Agora o estilo é aplicado dinamicamente apenas durante o drag
+
 interface ChatColumnProps {
   id: string;
   title: string;
@@ -159,9 +161,10 @@ interface ChatColumnProps {
   onMoveChat: (chatId: string, fromColumn: string, toColumn: string) => void;
   onOpenTagManager: (chat: Chat) => void;
   onRefresh: () => void;
+  showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
 }
 
-const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onRefresh }: ChatColumnProps) => {
+const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onRefresh, showToast }: ChatColumnProps) => {
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
     const saved = localStorage.getItem(`column-${id}-sortOrder`);
     return (saved as "recent" | "oldest") || "recent";
@@ -221,6 +224,24 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === "recent" ? "oldest" : "recent");
   };
+
+  // ✅ Função para lidar com movimentação via dropdown
+  const handleMoveFromDropdown = (chatId: string, toColumnId: string) => {
+    // Validar se está tentando mover para Repescagem
+    if (toColumnId === "repescagem") {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "A coluna 'Repescagem' é exclusiva para rotinas automáticas. Não é permitido mover conversas manualmente.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    onMoveChat(chatId, id, toColumnId);
+  };
+
+  // ✅ Verificar se a coluna é Repescagem
+  const isRepescagemColumn = title === "Repescagem";
 
   return (
     <Card className="w-80 h-full bg-gradient-card border-0 shadow-card flex flex-col flex-shrink-0">
@@ -314,7 +335,9 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
             ref={provided.innerRef}
             className={`flex-1 overflow-y-auto space-y-2 p-4 pt-0 transition-all duration-200 ${
               snapshot.isDraggingOver
-                ? 'bg-green-50/50 ring-2 ring-green-400 ring-inset rounded-lg'
+                ? isRepescagemColumn
+                  ? 'bg-red-50/50 ring-2 ring-red-500 ring-inset rounded-lg'
+                  : 'bg-green-50/50 ring-2 ring-green-400 ring-inset rounded-lg'
                 : ''
             }`}
           >
@@ -440,7 +463,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                             {columnsConfig.filter(col => col.id !== id).map(column => (
                               <DropdownMenuItem 
                                 key={column.id}
-                                onClick={() => onMoveChat(chat.id, id, column.id)}
+                                onClick={() => handleMoveFromDropdown(chat.id, column.id)}
                                 className="text-xs pl-6"
                               >
                                 {column.title}
@@ -475,7 +498,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   const [chatForTagManager, setChatForTagManager] = useState<Chat | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   
-  // ✅ MODIFICAÇÃO: Adicionadas as novas colunas no estado
   const [chats, setChats] = useState<Record<string, Chat[]>>({
     vip: [],
     humanizado: [],
@@ -507,7 +529,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
 
   useEffect(() => {
     if (chatsData?.chats) {
-      // ✅ MODIFICAÇÃO: Adicionadas as novas colunas no organized
       const organized: Record<string, Chat[]> = {
         vip: [],
         humanizado: [],
@@ -519,7 +540,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
       };
 
       chatsData.chats.forEach(chat => {
-        // ✅ MODIFICAÇÃO: Adicionado mapeamento para as novas colunas
         const columnMap: Record<string, string> = {
           'inbox': 'inicial',
           'vip': 'vip',
@@ -527,7 +547,10 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
           'followup': 'repescagem',
           'task': 'tarefa',
           'hot_lead': 'lead_quente',
-          'cold_lead': 'lead_frio'
+          'cold_lead': 'lead_frio',
+          'Repescagem': 'repescagem',
+          'Lead Quente': 'lead_quente',
+          'Atendimento Inicial': 'inicial'
         };
 
         const targetColumn = columnMap[chat.column] || 'inicial';
@@ -543,10 +566,19 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   }, [chatsData]);
 
   const moveChat = async (chatId: string, fromColumn: string, toColumn: string) => {
+    // ✅ VALIDAÇÃO: Bloquear movimentação para Repescagem
+    if (toColumn === "repescagem") {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "A coluna 'Repescagem' é exclusiva para rotinas automáticas. Não é permitido mover conversas manualmente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const chat = chats[fromColumn]?.find(c => c.id === chatId);
     if (!chat) return;
 
-    // ✅ MODIFICAÇÃO: Adicionado mapeamento reverso para as novas colunas
     const columnMapToBackend: Record<string, string> = {
       'vip': 'vip',
       'humanizado': 'humanized',
@@ -571,7 +603,10 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
 
     try {
       const apiFetch = (await import("@/lib/http")).default;
-      await apiFetch(`/dashboard/zapi/chats/${chatId}/column`, { method: 'PUT', body: JSON.stringify({ column: backendColumn }) });
+      await apiFetch(`/dashboard/zapi/chats/${chatId}/column`, { 
+        method: 'PUT', 
+        body: JSON.stringify({ column: backendColumn }) 
+      });
       
       setChats(prev => ({
         ...prev,
@@ -583,11 +618,20 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
         message: "Chat movido com sucesso!",
         description: `Movido para ${columnsConfig.find(c => c.id === toColumn)?.title}`,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       logError("Erro ao mover chat:", { error });
+      
+      const errorMessage = 
+        error && typeof error === 'object' && 'data' in error && 
+        error.data && typeof error.data === 'object' && 'message' in error.data
+          ? String(error.data.message)
+          : error && typeof error === 'object' && 'message' in error
+          ? String(error.message)
+          : "Não foi possível mover o chat.";
+      
       showToast?.({
         message: "Erro ao mover chat",
-        description: error instanceof Error ? error.message : "Não foi possível mover o chat.",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -624,7 +668,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
           if (response.ok) {
             const updatedChatsData = await response.json();
             
-            // ✅ MODIFICAÇÃO: Adicionadas as novas colunas no organized
             const organized: Record<string, Chat[]> = {
               vip: [],
               humanizado: [],
@@ -636,7 +679,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
             };
 
             updatedChatsData.chats.forEach((chat: Chat) => {
-              // ✅ MODIFICAÇÃO: Adicionado mapeamento para as novas colunas
               const columnMap: Record<string, string> = {
                 'inbox': 'inicial',
                 'vip': 'vip',
@@ -644,7 +686,10 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
                 'followup': 'repescagem',
                 'task': 'tarefa',
                 'hot_lead': 'lead_quente',
-                'cold_lead': 'lead_frio'
+                'cold_lead': 'lead_frio',
+                'Repescagem': 'repescagem',
+                'Lead Quente': 'lead_quente',
+                'Atendimento Inicial': 'inicial'
               };
 
               const targetColumn = columnMap[chat.column] || 'inicial';
@@ -683,7 +728,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
-        {/* ✅ MODIFICAÇÃO: Container principal com scroll horizontal */}
         <div className="w-full overflow-x-auto overflow-y-hidden pb-4 horizontal-scroll-container">
           <div className="flex gap-4 h-[calc(100vh-120px)] min-w-min">
             {columnsConfig.map(column => (
@@ -698,6 +742,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
                 onMoveChat={moveChat}
                 onOpenTagManager={setChatForTagManager}
                 onRefresh={loadTags}
+                showToast={showToast}
               />
             ))}
           </div>

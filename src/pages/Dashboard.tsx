@@ -13,11 +13,13 @@ import {
   User,
   MessageCircle,
   File,
+  Repeat,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
 import ChatColumns from "@/components/ChatColumns";
 import TagManager from "@/components/TagManager";
+import RoutinesModal from "@/components/RoutinesModal";
 import * as tagApi from "@/api/tags";
 import { logError } from "@/lib/logger";
 import Toast from "@/components/Toast";
@@ -39,11 +41,12 @@ interface DashboardData {
 const Sidebar: React.FC<{
   onClose: () => void;
   onOpenTags: () => void;
+  onOpenRoutines: () => void;
   onOpenSettings: () => void;
   onLogout: () => void;
   isOpen: boolean;
   userName: string;
-}> = ({ onClose, onOpenTags, onOpenSettings, onLogout, isOpen, userName }) => {
+}> = ({ onClose, onOpenTags, onOpenRoutines, onOpenSettings, onLogout, isOpen, userName }) => {
   const [visible, setVisible] = useState(isOpen);
 
   useEffect(() => {
@@ -97,6 +100,16 @@ const Sidebar: React.FC<{
             <Tag className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
             <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
               Gerenciar Etiquetas
+            </span>
+          </button>
+
+          <button
+            className="w-full text-left flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            onClick={onOpenRoutines}
+          >
+            <Repeat className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+            <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
+              Rotinas Automáticas
             </span>
           </button>
 
@@ -478,6 +491,7 @@ const Dashboard: React.FC = () => {
   const [showTagManager, setShowTagManager] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showRoutines, setShowRoutines] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [chatsData, setChatsData] = useState<ChatsData | null>(null);
   const [toast, setToast] = useState<{ message: string; description?: string; variant?: string } | null>(null);
@@ -940,6 +954,10 @@ const Dashboard: React.FC = () => {
           setShowTagManager(true);
           setShowSidebar(false);
         }}
+        onOpenRoutines={() => {
+          setShowRoutines(true);
+          setShowSidebar(false);
+        }}
         onOpenSettings={() => {
           setShowSettings(true);
           setShowSidebar(false);
@@ -972,7 +990,6 @@ const Dashboard: React.FC = () => {
           </div>
         </header>
 
-        {/* ✅ MODIFICAÇÃO PRINCIPAL: Seção main com scroll horizontal */}
         <main className="flex-1 flex flex-col overflow-hidden">
           {!isConnected || !chatsData ? (
             <div className="flex-1 flex items-center justify-center p-4">
@@ -1033,7 +1050,6 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* ✅ MODIFICAÇÃO: Wrapper com overflow-hidden para ChatColumns */}
               <div className="flex-1 overflow-hidden">
                 <ChatColumns 
                   chatsData={filteredChatsData} 
@@ -1058,6 +1074,12 @@ const Dashboard: React.FC = () => {
                 description: "As alterações foram salvas com sucesso.",
               });
             }} 
+          />
+        )}
+        {showRoutines && (
+          <RoutinesModal 
+            onClose={() => setShowRoutines(false)}
+            showToast={showToast}
           />
         )}
         {showSettings && (
