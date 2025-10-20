@@ -132,27 +132,99 @@ All colors MUST be HSL.
   background: #5a6265;
 }
 
-/* Utility helpers for consistent panels and chat backgrounds */
-@layer components {
-  .panel {
-    background: hsl(var(--card));
-    color: hsl(var(--card-foreground));
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-card);
-  }
+/* ========================================
+   ✅ SCROLL HORIZONTAL DO DASHBOARD
+   Estilização customizada para o carrossel de colunas
+   ======================================== */
 
-  .panel-strong {
-    background: var(--gradient-card);
-  }
+/* Barra de scroll horizontal - Estilo padrão (Firefox) */
+.horizontal-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(142 71% 45%) hsl(210 40% 96%);
+}
 
-  .chat-modal {
-    background: hsl(var(--card));
-    border-radius: calc(var(--radius) + 6px);
-    box-shadow: 0 30px 60px -30px hsl(var(--primary) / 0.12), 0 8px 24px -8px hsl(var(--primary) / 0.06);
-  }
+/* Barra de scroll horizontal - Webkit (Chrome, Safari, Edge) */
+.horizontal-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
 
-  /* Safe-bg forces solid card color when semi-transparent utilities would show through */
-  .safe-bg {
-    background: hsl(var(--card)) !important;
+.horizontal-scroll-container::-webkit-scrollbar-track {
+  background: hsl(210 40% 96%);
+  border-radius: 4px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(to right, hsl(142 71% 45%), hsl(142 76% 36%));
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to right, hsl(142 76% 36%), hsl(142 71% 30%));
+}
+
+/* Garantir que o container ocupe toda a largura disponível */
+.horizontal-scroll-container {
+  width: 100%;
+}
+
+/* ========================================
+   RESPONSIVIDADE MOBILE
+   ======================================== */
+
+/* Ajustes para telas pequenas (mobile) */
+@media (max-width: 640px) {
+  .horizontal-scroll-container::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  .horizontal-scroll-container {
+    scrollbar-width: auto;
+  }
+}
+
+/* Ajustes para tablets */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .horizontal-scroll-container::-webkit-scrollbar {
+    height: 7px;
+  }
+}
+
+/* ========================================
+   COMPORTAMENTO DO SCROLL
+   ======================================== */
+
+/* Smooth scrolling para melhor experiência */
+.horizontal-scroll-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ocultar scrollbar quando não estiver em uso (opcional) */
+@supports selector(::-webkit-scrollbar) {
+  .horizontal-scroll-container:not(:hover)::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  
+  .horizontal-scroll-container:hover::-webkit-scrollbar-thumb {
+    background: linear-gradient(to right, hsl(142 71% 45%), hsl(142 76% 36%));
+  }
+}
+
+/* ========================================
+   ACESSIBILIDADE
+   ======================================== */
+
+/* Garantir contraste adequado para usuários com baixa visão */
+@media (prefers-contrast: high) {
+  .horizontal-scroll-container::-webkit-scrollbar-thumb {
+    background: hsl(142 71% 40%);
+  }
+}
+
+/* Respeitar preferência de movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+  .horizontal-scroll-container {
+    scroll-behavior: auto;
   }
 }
