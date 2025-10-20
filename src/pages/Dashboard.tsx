@@ -950,7 +950,7 @@ const Dashboard: React.FC = () => {
 
   if (!dashboardData) {
     return (
-      <div className="min-h-screen bg-[#f4f8f9] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
           <p className="text-gray-600">Carregando dados...</p>
@@ -961,7 +961,7 @@ const Dashboard: React.FC = () => {
 
   if (isCheckingConnection) {
     return (
-      <div className="min-h-screen bg-[#f4f8f9] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
           <p className="text-gray-600">Verificando conexão WhatsApp...</p>
@@ -980,7 +980,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f8f9] flex relative">
+    <div className="min-h-screen bg-background flex relative">
       <Sidebar
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
@@ -1035,7 +1035,7 @@ const Dashboard: React.FC = () => {
           {!isConnected || !chatsData ? (
             <Card className="shadow-md max-w-sm w-full rounded-lg">
               <CardHeader className="text-center pt-8">
-                <div className="p-6 bg-[#edf2f3] rounded-full w-fit mx-auto mb-4">
+                <div className="p-6 bg-secondary rounded-full w-fit mx-auto mb-4">
                   <QrCode className="w-10 h-10 text-[#7f8b91]" />
                 </div>
                 <CardTitle className="text-base font-semibold text-gray-800">Conecte seu WhatsApp Business</CardTitle>
