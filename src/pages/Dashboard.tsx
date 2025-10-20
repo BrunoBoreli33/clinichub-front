@@ -489,7 +489,6 @@ const Dashboard: React.FC = () => {
   const [availableTags, setAvailableTags] = useState<Array<{ id: string; name: string; color: string }>>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
 
-  // Memoized filtered chats — must be declared unconditionally to respect Rules of Hooks
   const filteredChatsData = React.useMemo(() => {
     if (!chatsData) return chatsData;
     if (selectedTagIds.size === 0) return chatsData;
@@ -502,10 +501,9 @@ const Dashboard: React.FC = () => {
   
   const hasCheckedInitialConnection = useRef(false);
   
-  // ✅ NOVO: Refs para controle de debounce
   const fetchChatsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
-  const minFetchInterval = 1000; // Mínimo de 1 segundo entre chamadas
+  const minFetchInterval = 1000;
 
   const showToast = useCallback(({ message, description, variant = "default" }: { message: string; description?: string; variant?: string }) => {
     setToast({ message, description, variant });
@@ -525,7 +523,6 @@ const Dashboard: React.FC = () => {
     setDashboardData(updatedData);
   }, []);
 
-  // ✅ Buscar chats (com suporte a reload silencioso)
   const fetchChats = useCallback(async (silent = false) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -570,14 +567,11 @@ const Dashboard: React.FC = () => {
     }
   }, [showToast]);
 
-  // ✅ NOVO: Debounced fetch para evitar chamadas excessivas
   const debouncedFetchChats = useCallback((silent: boolean = false, delay: number = 500) => {
-    // Limpar timeout anterior
     if (fetchChatsTimeoutRef.current) {
       clearTimeout(fetchChatsTimeoutRef.current);
     }
 
-    // Verificar intervalo mínimo desde a última chamada
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchTimeRef.current;
     
@@ -586,20 +580,17 @@ const Dashboard: React.FC = () => {
       return;
     }
 
-    // Agendar nova chamada com debounce
     fetchChatsTimeoutRef.current = setTimeout(() => {
       lastFetchTimeRef.current = Date.now();
       fetchChats(silent);
     }, delay);
   }, [fetchChats, minFetchInterval]);
 
-  // ✅ NOVO: Callback para recarregar chats silenciosamente ao fechar ChatWindow
   const reloadChats = useCallback(() => {
     console.log("🔄 Recarregando chats após fechar ChatWindow");
     debouncedFetchChats(true, 300);
   }, [debouncedFetchChats]);
 
-  // ✅ MODIFICADO: Callback para processar novas mensagens - SEM TOAST (já mostrado no useNotifications)
   const handleNewMessage = useCallback((data: NewMessageNotification) => {
     console.log('📨 Nova mensagem recebida via SSE:', {
       chatId: data.chatId,
@@ -608,20 +599,15 @@ const Dashboard: React.FC = () => {
       unreadCount: data.unreadCount
     });
     
-    // ✅ REMOVIDO: Toast daqui - já mostrado no useNotifications quando nenhum chat está aberto
-    
-    // ✅ Usar debounced fetch para evitar múltiplas chamadas
     if (isConnected && chatsData) {
       debouncedFetchChats(true, 500);
     }
 
-    // ✅ CRÍTICO: Emitir evento para o ChatWindow
     window.dispatchEvent(new CustomEvent('sse-new-message', {
       detail: { type: 'new-message', data }
     }));
   }, [isConnected, chatsData, debouncedFetchChats]);
 
-  // ✅ CORRIGIDO: Callback para processar atualizações de chat via SSE (fromMe: true)
   const handleChatUpdate = useCallback((data: ChatUpdateNotification) => {
     console.log('🔄 Atualização de chat via SSE (mensagem enviada):', {
       chatId: data.chatId,
@@ -629,44 +615,35 @@ const Dashboard: React.FC = () => {
       lastMessageContent: data.lastMessageContent?.substring(0, 30) + '...'
     });
     
-    // ✅ Atualizar chats silenciosamente com debounce (sem toast, sem som)
     if (isConnected && chatsData) {
       debouncedFetchChats(true, 500);
     }
 
-    // ✅ CRÍTICO: Emitir evento para o ChatWindow
     window.dispatchEvent(new CustomEvent('sse-chat-update', {
       detail: { type: 'chat-update', data }
     }));
   }, [isConnected, chatsData, debouncedFetchChats]);
 
-  // ✅ CORRIGIDO: Callback para processar atualização de tag via SSE
   const handleTagUpdate = useCallback((data: TagUpdateNotification) => {
     console.log('🏷️ Atualização de tag via SSE:', data);
     
-    // Recarregar chats silenciosamente para atualizar as tags nos chats
     if (isConnected && chatsData) {
       debouncedFetchChats(true, 500);
     }
     
-    // Incrementar versão das tags para forçar re-render do TagManager se estiver aberto
     setTagsVersion(prev => prev + 1);
   }, [isConnected, chatsData, debouncedFetchChats]);
 
-  // ✅ CORRIGIDO: Callback para processar exclusão de tag via SSE
   const handleTagDelete = useCallback((data: TagDeleteNotification) => {
     console.log('🗑️ Exclusão de tag via SSE:', data);
     
-    // Recarregar chats silenciosamente para remover tags excluídas dos chats
     if (isConnected && chatsData) {
       debouncedFetchChats(true, 500);
     }
     
-    // Incrementar versão das tags para forçar re-render do TagManager se estiver aberto
     setTagsVersion(prev => prev + 1);
   }, [isConnected, chatsData, debouncedFetchChats]);
 
-// ✅ MODIFICADO: Conectar ao sistema de notificações SSE com setOpenChatId
   const { setOpenChatId } = useNotifications({
     onNewMessage: handleNewMessage,
     onChatUpdate: handleChatUpdate,
@@ -915,7 +892,6 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(checkConnectionInterval);
   }, [isConnected, chatsData, showToast]);
 
-  // Cleanup de timeouts ao desmontar
   useEffect(() => {
     return () => {
       if (fetchChatsTimeoutRef.current) {
@@ -979,7 +955,7 @@ const Dashboard: React.FC = () => {
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
 
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
+            <div className="absolute left-[38%] -translate-x-1/2 flex items-center gap-3">
               <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>
@@ -996,27 +972,30 @@ const Dashboard: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 flex items-start justify-center p-4 pt-8">
+        {/* ✅ MODIFICAÇÃO PRINCIPAL: Seção main com scroll horizontal */}
+        <main className="flex-1 flex flex-col overflow-hidden">
           {!isConnected || !chatsData ? (
-            <Card className="shadow-md max-w-sm w-full rounded-lg">
-              <CardHeader className="text-center pt-8">
-                <div className="p-6 bg-[#edf2f3] rounded-full w-fit mx-auto mb-4">
-                  <QrCode className="w-10 h-10 text-[#7f8b91]" />
-                </div>
-                <CardTitle className="text-base font-semibold text-gray-800">Conecte seu WhatsApp Business</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center pb-8">
-                <p className="text-sm text-gray-500 mb-6">Para começar a monitorar suas conversas, conecte sua conta do WhatsApp Business.</p>
-                <Button className="w-full bg-green-500 text-white hover:bg-green-600 rounded-md py-2 px-4 font-semibold flex items-center justify-center gap-2" onClick={() => setShowQR(true)}>
-                  <QrCode className="w-4 h-4 text-white opacity-90" />
-                  Conectar Agora
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex-1 flex items-center justify-center p-4">
+              <Card className="shadow-md max-w-sm w-full rounded-lg">
+                <CardHeader className="text-center pt-8">
+                  <div className="p-6 bg-[#edf2f3] rounded-full w-fit mx-auto mb-4">
+                    <QrCode className="w-10 h-10 text-[#7f8b91]" />
+                  </div>
+                  <CardTitle className="text-base font-semibold text-gray-800">Conecte seu WhatsApp Business</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center pb-8">
+                  <p className="text-sm text-gray-500 mb-6">Para começar a monitorar suas conversas, conecte sua conta do WhatsApp Business.</p>
+                  <Button className="w-full bg-green-500 text-white hover:bg-green-600 rounded-md py-2 px-4 font-semibold flex items-center justify-center gap-2" onClick={() => setShowQR(true)}>
+                    <QrCode className="w-4 h-4 text-white opacity-90" />
+                    Conectar Agora
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           ) : (
-            <div className="w-full max-w-6xl">
-              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3">
+            <div className="flex-1 p-4 overflow-hidden flex flex-col">
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap ">
+                <div className="flex items-center gap-3 absolute left-[10%]">
                   <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
                   <div className="flex items-center gap-2 flex-wrap">
                   <button
@@ -1042,27 +1021,29 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="ml-auto">
+                <div className="ml-auto ">
                   <button
                     onClick={exportFilteredToCSV}
                     className="flex items-center gap-2 px-3 py-1 rounded-md bg-white border hover:bg-gray-50"
                     title="Exportar conversas filtradas para CSV"
                   >
-                    <File className="w-4 h-4" />
+                    <File className="w-4 h-4 " />
                     <span className="text-sm">Exportar</span>
                   </button>
                 </div>
               </div>
 
-              <ChatColumns 
-                chatsData={filteredChatsData} 
-                showToast={showToast} 
-                tagsVersion={tagsVersion}
-                onChatClosed={reloadChats}
-                setOpenChatId={setOpenChatId}
-              />
+              {/* ✅ MODIFICAÇÃO: Wrapper com overflow-hidden para ChatColumns */}
+              <div className="flex-1 overflow-hidden">
+                <ChatColumns 
+                  chatsData={filteredChatsData} 
+                  showToast={showToast} 
+                  tagsVersion={tagsVersion}
+                  onChatClosed={reloadChats}
+                  setOpenChatId={setOpenChatId}
+                />
+              </div>
             </div>
-            
           )}
         </main>
 

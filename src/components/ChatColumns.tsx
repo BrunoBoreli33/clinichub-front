@@ -18,15 +18,18 @@ interface ChatColumnsProps {
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
   tagsVersion?: number;
   onChatClosed?: () => void;
-  setOpenChatId?: (chatId: string | null) => void; // ✅ NOVO
+  setOpenChatId?: (chatId: string | null) => void;
 }
 
+// ✅ MODIFICAÇÃO: Adicionadas as novas colunas Lead Quente e Lead Frio
 const columnsConfig = [
   { id: "vip", title: "Atendimento VIP", color: "from-orange-400 to-orange-500" },
   { id: "humanizado", title: "Atendimento Humanizado", color: "from-blue-500 to-blue-600" },
   { id: "inicial", title: "Atendimento Inicial", color: "from-green-500 to-green-600" },
   { id: "repescagem", title: "Repescagem", color: "from-red-500 to-red-600" },
-  { id: "tarefa", title: "Tarefa", color: "from-purple-500 to-purple-600" }
+  { id: "tarefa", title: "Tarefa", color: "from-purple-500 to-purple-600" },
+  { id: "lead_quente", title: "Lead Quente", color: "from-yellow-400 to-yellow-500" },
+  { id: "lead_frio", title: "Lead Frio", color: "from-gray-400 to-gray-500" }
 ];
 
 const sortChatsByLastMessage = (chats: Chat[], sortOrder: "recent" | "oldest") => {
@@ -85,7 +88,6 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
           </DialogTitle>
         </DialogHeader>
         
-        {/* ✅ MODIFICAÇÃO 2: Scroll para mais de 6 etiquetas */}
         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
           {availableTags.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
@@ -98,7 +100,6 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
                 className="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-white/20 cursor-pointer hover:bg-white/70 transition-colors"
                 onClick={() => toggleTag(tag.id)}
               >
-                {/* ✅ MODIFICAÇÃO 1 CORRIGIDA: Checkbox sem onCheckedChange para evitar double toggle */}
                 <Checkbox
                   checked={selectedTagIds.has(tag.id)}
                   className="pointer-events-none"
@@ -222,7 +223,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   };
 
   return (
-    <Card className="w-80 h-full bg-gradient-card border-0 shadow-card flex flex-col">
+    <Card className="w-80 h-full bg-gradient-card border-0 shadow-card flex flex-col flex-shrink-0">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className={`text-base font-bold bg-gradient-to-r ${color} bg-clip-text text-transparent`}>
@@ -306,7 +307,6 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
         </p>
       </CardHeader>
 
-      {/* ✅ MODIFICAÇÃO 4: Efeito visual durante drag and drop */}
       <Droppable droppableId={id}>
         {(provided, snapshot) => (
           <CardContent
@@ -474,12 +474,16 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatForTagManager, setChatForTagManager] = useState<Chat | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  
+  // ✅ MODIFICAÇÃO: Adicionadas as novas colunas no estado
   const [chats, setChats] = useState<Record<string, Chat[]>>({
     vip: [],
     humanizado: [],
     inicial: [],
     repescagem: [],
-    tarefa: []
+    tarefa: [],
+    lead_quente: [],
+    lead_frio: []
   });
 
   useEffect(() => {
@@ -503,21 +507,27 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
 
   useEffect(() => {
     if (chatsData?.chats) {
+      // ✅ MODIFICAÇÃO: Adicionadas as novas colunas no organized
       const organized: Record<string, Chat[]> = {
         vip: [],
         humanizado: [],
         inicial: [],
         repescagem: [],
-        tarefa: []
+        tarefa: [],
+        lead_quente: [],
+        lead_frio: []
       };
 
       chatsData.chats.forEach(chat => {
+        // ✅ MODIFICAÇÃO: Adicionado mapeamento para as novas colunas
         const columnMap: Record<string, string> = {
           'inbox': 'inicial',
           'vip': 'vip',
           'humanized': 'humanizado',
           'followup': 'repescagem',
-          'task': 'tarefa'
+          'task': 'tarefa',
+          'hot_lead': 'lead_quente',
+          'cold_lead': 'lead_frio'
         };
 
         const targetColumn = columnMap[chat.column] || 'inicial';
@@ -536,12 +546,15 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
     const chat = chats[fromColumn]?.find(c => c.id === chatId);
     if (!chat) return;
 
+    // ✅ MODIFICAÇÃO: Adicionado mapeamento reverso para as novas colunas
     const columnMapToBackend: Record<string, string> = {
       'vip': 'vip',
       'humanizado': 'humanized',
       'inicial': 'inbox',
       'repescagem': 'followup',
-      'tarefa': 'task'
+      'tarefa': 'task',
+      'lead_quente': 'hot_lead',
+      'lead_frio': 'cold_lead'
     };
 
     const backendColumn = columnMapToBackend[toColumn] || toColumn;
@@ -557,10 +570,9 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
     }
 
     try {
-      // Use apiFetch so successful mutation triggers a reload (default behavior)
       const apiFetch = (await import("@/lib/http")).default;
       await apiFetch(`/dashboard/zapi/chats/${chatId}/column`, { method: 'PUT', body: JSON.stringify({ column: backendColumn }) });
-      // optimistic UI update (will be superseded by reload)
+      
       setChats(prev => ({
         ...prev,
         [fromColumn]: prev[fromColumn].filter(c => c.id !== chatId),
@@ -612,21 +624,27 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
           if (response.ok) {
             const updatedChatsData = await response.json();
             
+            // ✅ MODIFICAÇÃO: Adicionadas as novas colunas no organized
             const organized: Record<string, Chat[]> = {
               vip: [],
               humanizado: [],
               inicial: [],
               repescagem: [],
-              tarefa: []
+              tarefa: [],
+              lead_quente: [],
+              lead_frio: []
             };
 
             updatedChatsData.chats.forEach((chat: Chat) => {
+              // ✅ MODIFICAÇÃO: Adicionado mapeamento para as novas colunas
               const columnMap: Record<string, string> = {
                 'inbox': 'inicial',
                 'vip': 'vip',
                 'humanized': 'humanizado',
                 'followup': 'repescagem',
-                'task': 'tarefa'
+                'task': 'tarefa',
+                'hot_lead': 'lead_quente',
+                'cold_lead': 'lead_frio'
               };
 
               const targetColumn = columnMap[chat.column] || 'inicial';
@@ -665,8 +683,9 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 h-[calc(100vh-120px)] justify-center">
-          <div className="flex gap-4 justify-center">
+        {/* ✅ MODIFICAÇÃO: Container principal com scroll horizontal */}
+        <div className="w-full overflow-x-auto overflow-y-hidden pb-4 horizontal-scroll-container">
+          <div className="flex gap-4 h-[calc(100vh-120px)] min-w-min">
             {columnsConfig.map(column => (
               <ChatColumn
                 key={column.id}
@@ -682,25 +701,25 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
               />
             ))}
           </div>
-
-          {selectedChat && (
-            <div 
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-              onClick={handleCloseChat}
-            >
-              <div 
-                className="w-full max-w-2xl h-[80vh] mx-4 animate-in fade-in zoom-in-95 duration-200"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ChatWindow
-                  chat={selectedChat}
-                  onClose={handleCloseChat}
-                  setOpenChatId={setOpenChatId}
-                />
-              </div>
-            </div>
-          )}
         </div>
+
+        {selectedChat && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={handleCloseChat}
+          >
+            <div 
+              className="w-full max-w-2xl h-[80vh] mx-4 animate-in fade-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ChatWindow
+                chat={selectedChat}
+                onClose={handleCloseChat}
+                setOpenChatId={setOpenChatId}
+              />
+            </div>
+          </div>
+        )}
       </DragDropContext>
 
       {chatForTagManager && (
