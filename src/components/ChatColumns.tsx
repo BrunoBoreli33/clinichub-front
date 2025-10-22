@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw } from "lucide-react";
+import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2 } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 import * as tagApi from "@/api/tags";
 import { logError } from "@/lib/logger";
@@ -18,7 +18,6 @@ interface ChatColumnsProps {
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
   tagsVersion?: number;
   onChatClosed?: () => void;
-  setOpenChatId?: (chatId: string | null) => void;
 }
 
 const columnsConfig = [
@@ -26,9 +25,7 @@ const columnsConfig = [
   { id: "humanizado", title: "Atendimento Humanizado", color: "from-blue-500 to-blue-600" },
   { id: "inicial", title: "Atendimento Inicial", color: "from-green-500 to-green-600" },
   { id: "repescagem", title: "Repescagem", color: "from-red-500 to-red-600" },
-  { id: "tarefa", title: "Tarefa", color: "from-purple-500 to-purple-600" },
-  { id: "lead_quente", title: "Lead Quente", color: "from-yellow-400 to-yellow-500" },
-  { id: "lead_frio", title: "Lead Frio", color: "from-gray-400 to-gray-500" }
+  { id: "tarefa", title: "Tarefa", color: "from-purple-500 to-purple-600" }
 ];
 
 const sortChatsByLastMessage = (chats: Chat[], sortOrder: "recent" | "oldest") => {
@@ -87,6 +84,7 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
           </DialogTitle>
         </DialogHeader>
         
+        {/* ✅ MODIFICAÇÃO 2: Scroll para mais de 6 etiquetas */}
         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
           {availableTags.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
@@ -96,9 +94,10 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
             availableTags.map(tag => (
               <div
                 key={tag.id}
-                className="flex items-center gap-3 p-3 panel rounded-lg border border-border cursor-pointer hover:shadow-card transition-all"
+                className="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-white/20 cursor-pointer hover:bg-white/70 transition-colors"
                 onClick={() => toggleTag(tag.id)}
               >
+                {/* ✅ MODIFICAÇÃO 1 CORRIGIDA: Checkbox sem onCheckedChange para evitar double toggle */}
                 <Checkbox
                   checked={selectedTagIds.has(tag.id)}
                   className="pointer-events-none"
@@ -158,10 +157,9 @@ interface ChatColumnProps {
   onMoveChat: (chatId: string, fromColumn: string, toColumn: string) => void;
   onOpenTagManager: (chat: Chat) => void;
   onRefresh: () => void;
-  showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
 }
 
-const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onRefresh, showToast }: ChatColumnProps) => {
+const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onRefresh }: ChatColumnProps) => {
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
     const saved = localStorage.getItem(`column-${id}-sortOrder`);
     return (saved as "recent" | "oldest") || "recent";
@@ -221,67 +219,6 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === "recent" ? "oldest" : "recent");
   };
-
-  const handleMoveFromDropdown = (chatId: string, toColumnId: string) => {
-    if (toColumnId === "repescagem") {
-      showToast?.({
-        message: "Movimentação bloqueada",
-        description: "A coluna 'Repescagem' é exclusiva para rotinas automáticas. Não é permitido mover conversas manualmente.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    onMoveChat(chatId, id, toColumnId);
-  };
-
-  // ✅ NOVA FUNÇÃO: Resetar rotinas do chat
-  const handleResetRoutine = async (chatId: string, chatName: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        showToast?.({
-          message: "Erro de autenticação",
-          description: "Token não encontrado",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const response = await fetch(buildUrl(`/dashboard/chats/${chatId}/reset-routine`), {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        showToast?.({
-          message: "Rotinas resetadas",
-          description: `As rotinas do chat "${chatName}" foram resetadas com sucesso`,
-        });
-        onRefresh?.();
-      } else {
-        showToast?.({
-          message: "Erro ao resetar rotinas",
-          description: data.message || "Ocorreu um erro desconhecido",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      logError('Erro ao resetar rotinas do chat', error);
-      showToast?.({
-        message: "Erro ao resetar rotinas",
-        description: "Não foi possível resetar as rotinas",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const isRepescagemColumn = title === "Repescagem";
 
   return (
   <Card className="w-full sm:w-80 h-full bg-gradient-card border-0 shadow-card flex flex-col">
@@ -368,6 +305,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
         </p>
       </CardHeader>
 
+      {/* ✅ MODIFICAÇÃO 4: Efeito visual durante drag and drop */}
       <Droppable droppableId={id}>
         {(provided, snapshot) => (
           <CardContent
@@ -375,8 +313,8 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
             ref={provided.innerRef}
             className={`flex-1 overflow-y-auto space-y-2 p-4 pt-0 transition-all duration-200 ${
               snapshot.isDraggingOver
-                ? 'panel ring-2 ring-green-400 ring-inset rounded-lg'
-                : 'panel'
+                ? 'bg-green-50/50 ring-2 ring-green-400 ring-inset rounded-lg'
+                : ''
             }`}
           >
             {sortedChats.length === 0 ? (
@@ -390,11 +328,11 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      className={`group relative panel p-3 rounded-lg border transition-all cursor-pointer ${
-                          chat.unread > 0 
-                            ? 'border-green-200 shadow-lg ring-2 ring-green-400/50' 
-                            : 'border-border hover:shadow-card'
-                        }`}
+                      className={`group relative bg-white p-3 rounded-lg border transition-all cursor-pointer ${
+                        chat.unread > 0 
+                          ? 'bg-green-50/30 border-green-200 shadow-lg ring-2 ring-green-400/50' 
+                          : 'border-gray-100 hover:shadow-card'
+                      }`}
                     >
                       <div className="flex items-start justify-between">
                         <div 
@@ -492,19 +430,6 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                               <TagIcon className="mr-2 h-3 w-3" />
                               Gerenciar Etiquetas
                             </DropdownMenuItem>
-                            
-                            {/* ✅ NOVA OPÇÃO: Resetar Rotinas */}
-                            <DropdownMenuItem 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleResetRoutine(chat.id, chat.name);
-                              }}
-                              className="text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                            >
-                              <RotateCcw className="mr-2 h-3 w-3" />
-                              Resetar Rotinas
-                            </DropdownMenuItem>
-                            
                             <DropdownMenuSeparator />
                             <DropdownMenuItem disabled className="text-xs">
                               <MoveRight className="mr-2 h-3 w-3" />
@@ -514,7 +439,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                             {columnsConfig.filter(col => col.id !== id).map(column => (
                               <DropdownMenuItem 
                                 key={column.id}
-                                onClick={() => handleMoveFromDropdown(chat.id, column.id)}
+                                onClick={() => onMoveChat(chat.id, id, column.id)}
                                 className="text-xs pl-6"
                               >
                                 {column.title}
@@ -544,19 +469,16 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   );
 };
 
-const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenChatId }: ChatColumnsProps) => {
+const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed }: ChatColumnsProps) => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatForTagManager, setChatForTagManager] = useState<Chat | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  
   const [chats, setChats] = useState<Record<string, Chat[]>>({
     vip: [],
     humanizado: [],
     inicial: [],
     repescagem: [],
-    tarefa: [],
-    lead_quente: [],
-    lead_frio: []
+    tarefa: []
   });
 
   useEffect(() => {
@@ -585,9 +507,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
         humanizado: [],
         inicial: [],
         repescagem: [],
-        tarefa: [],
-        lead_quente: [],
-        lead_frio: []
+        tarefa: []
       };
 
       chatsData.chats.forEach(chat => {
@@ -596,12 +516,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
           'vip': 'vip',
           'humanized': 'humanizado',
           'followup': 'repescagem',
-          'task': 'tarefa',
-          'hot_lead': 'lead_quente',
-          'cold_lead': 'lead_frio',
-          'Repescagem': 'repescagem',
-          'Lead Quente': 'lead_quente',
-          'Atendimento Inicial': 'inicial'
+          'task': 'tarefa'
         };
 
         const targetColumn = columnMap[chat.column] || 'inicial';
@@ -617,15 +532,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   }, [chatsData]);
 
   const moveChat = async (chatId: string, fromColumn: string, toColumn: string) => {
-    if (toColumn === "repescagem") {
-      showToast?.({
-        message: "Movimentação bloqueada",
-        description: "A coluna 'Repescagem' é exclusiva para rotinas automáticas. Não é permitido mover conversas manualmente.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const chat = chats[fromColumn]?.find(c => c.id === chatId);
     if (!chat) return;
 
@@ -634,9 +540,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
       'humanizado': 'humanized',
       'inicial': 'inbox',
       'repescagem': 'followup',
-      'tarefa': 'task',
-      'lead_quente': 'hot_lead',
-      'lead_frio': 'cold_lead'
+      'tarefa': 'task'
     };
 
     const backendColumn = columnMapToBackend[toColumn] || toColumn;
@@ -652,12 +556,10 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
     }
 
     try {
+      // Use apiFetch so successful mutation triggers a reload (default behavior)
       const apiFetch = (await import("@/lib/http")).default;
-      await apiFetch(`/dashboard/zapi/chats/${chatId}/column`, { 
-        method: 'PUT', 
-        body: JSON.stringify({ column: backendColumn }) 
-      });
-      
+      await apiFetch(`/dashboard/zapi/chats/${chatId}/column`, { method: 'PUT', body: JSON.stringify({ column: backendColumn }) });
+      // optimistic UI update (will be superseded by reload)
       setChats(prev => ({
         ...prev,
         [fromColumn]: prev[fromColumn].filter(c => c.id !== chatId),
@@ -668,20 +570,11 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
         message: "Chat movido com sucesso!",
         description: `Movido para ${columnsConfig.find(c => c.id === toColumn)?.title}`,
       });
-    } catch (error: unknown) {
+    } catch (error) {
       logError("Erro ao mover chat:", { error });
-      
-      const errorMessage = 
-        error && typeof error === 'object' && 'data' in error && 
-        error.data && typeof error.data === 'object' && 'message' in error.data
-          ? String(error.data.message)
-          : error && typeof error === 'object' && 'message' in error
-          ? String(error.message)
-          : "Não foi possível mover o chat.";
-      
       showToast?.({
         message: "Erro ao mover chat",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Não foi possível mover o chat.",
         variant: "destructive"
       });
     }
@@ -694,15 +587,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
     const fromColumn = source.droppableId;
     const toColumn = destination.droppableId;
     const chatId = draggableId;
-
-    if (fromColumn === "repescagem") {
-      showToast?.({
-        message: "Movimentação bloqueada",
-        description: "Chats na coluna 'Repescagem' só podem ser movidos automaticamente pelo sistema de rotinas.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (fromColumn !== toColumn) {
       moveChat(chatId, fromColumn, toColumn);
@@ -732,9 +616,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
               humanizado: [],
               inicial: [],
               repescagem: [],
-              tarefa: [],
-              lead_quente: [],
-              lead_frio: []
+              tarefa: []
             };
 
             updatedChatsData.chats.forEach((chat: Chat) => {
@@ -743,12 +625,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
                 'vip': 'vip',
                 'humanized': 'humanizado',
                 'followup': 'repescagem',
-                'task': 'tarefa',
-                'hot_lead': 'lead_quente',
-                'cold_lead': 'lead_frio',
-                'Repescagem': 'repescagem',
-                'Lead Quente': 'lead_quente',
-                'Atendimento Inicial': 'inicial'
+                'task': 'tarefa'
               };
 
               const targetColumn = columnMap[chat.column] || 'inicial';
@@ -787,8 +664,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
-<<<<<<< HEAD
-<<<<<<< HEAD
         <div className="w-full">
           {/* Responsive columns: horizontal scroll on small screens, grid on larger */}
           <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 px-2 sm:overflow-visible sm:flex-wrap h-[calc(100vh-120px)] sm:h-auto">
@@ -822,53 +697,11 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
                 <ChatWindow
                   chat={selectedChat}
                   onClose={handleCloseChat}
-                  setOpenChatId={setOpenChatId}
                 />
               </div>
             </div>
           )}
-=======
-        {/* ✅ MODIFICAÇÃO: Container principal com scroll horizontal */}
-=======
->>>>>>> 7aae6f5 (Rotinas_V0.0_Modo_DEV)
-        <div className="w-full overflow-x-auto overflow-y-hidden pb-4 horizontal-scroll-container">
-          <div className="flex gap-4 h-[calc(100vh-120px)] min-w-min">
-            {columnsConfig.map(column => (
-              <ChatColumn
-                key={column.id}
-                id={column.id}
-                title={column.title}
-                color={column.color}
-                chats={chats[column.id] || []}
-                availableTags={availableTags}
-                onChatSelect={setSelectedChat}
-                onMoveChat={moveChat}
-                onOpenTagManager={setChatForTagManager}
-                onRefresh={loadTags}
-                showToast={showToast}
-              />
-            ))}
-          </div>
->>>>>>> bf5d11c (ADD_Columns_Leads_Quente_Frio)
         </div>
-
-        {selectedChat && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={handleCloseChat}
-          >
-            <div 
-              className="w-full max-w-2xl h-[80vh] mx-4 animate-in fade-in zoom-in-95 duration-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ChatWindow
-                chat={selectedChat}
-                onClose={handleCloseChat}
-                setOpenChatId={setOpenChatId}
-              />
-            </div>
-          </div>
-        )}
       </DragDropContext>
 
       {chatForTagManager && (

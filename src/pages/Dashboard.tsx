@@ -13,11 +13,8 @@ import {
   User,
   MessageCircle,
   File,
-<<<<<<< HEAD
-  Search,
-=======
   Repeat,
->>>>>>> 7aae6f5 (Rotinas_V0.0_Modo_DEV)
+  Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
@@ -522,7 +519,6 @@ const Dashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
 
-<<<<<<< HEAD
   // Memoized filtered chats — must be declared unconditionally to respect Rules of Hooks
   const normalizeDigits = (s?: string) => (s || "").replace(/\D/g, "");
 
@@ -532,8 +528,6 @@ const Dashboard: React.FC = () => {
     return () => clearTimeout(id);
   }, [searchTerm]);
 
-=======
->>>>>>> bf5d11c (ADD_Columns_Leads_Quente_Frio)
   const filteredChatsData = React.useMemo(() => {
     if (!chatsData) return chatsData;
 
@@ -1027,7 +1021,6 @@ const Dashboard: React.FC = () => {
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
 
-<<<<<<< HEAD
             {/* Mobile compact title */}
             <div className="flex items-center gap-3 sm:hidden ml-2">
               <div className="p-1 bg-gradient-to-b from-green-400 to-green-600 rounded-md flex items-center justify-center">
@@ -1040,9 +1033,6 @@ const Dashboard: React.FC = () => {
 
             {/* Desktop/Tablet centered title */}
             <div className="hidden sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex sm:items-center sm:gap-3">
-=======
-            <div className="absolute left-[38%] -translate-x-1/2 flex items-center gap-3">
->>>>>>> bf5d11c (ADD_Columns_Leads_Quente_Frio)
               <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>
@@ -1061,7 +1051,6 @@ const Dashboard: React.FC = () => {
 
         <main className="flex-1 flex flex-col overflow-hidden">
           {!isConnected || !chatsData ? (
-<<<<<<< HEAD
             <Card className="shadow-md max-w-sm w-full rounded-lg">
               <CardHeader className="text-center pt-8">
                 <div className="p-6 bg-secondary rounded-full w-fit mx-auto mb-4">
@@ -1090,40 +1079,6 @@ const Dashboard: React.FC = () => {
                       className="pl-10 pr-10"
                     />
                     {searchTerm && (
-=======
-            <div className="flex-1 flex items-center justify-center p-4">
-              <Card className="shadow-md max-w-sm w-full rounded-lg">
-                <CardHeader className="text-center pt-8">
-                  <div className="p-6 bg-[#edf2f3] rounded-full w-fit mx-auto mb-4">
-                    <QrCode className="w-10 h-10 text-[#7f8b91]" />
-                  </div>
-                  <CardTitle className="text-base font-semibold text-gray-800">Conecte seu WhatsApp Business</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center pb-8">
-                  <p className="text-sm text-gray-500 mb-6">Para começar a monitorar suas conversas, conecte sua conta do WhatsApp Business.</p>
-                  <Button className="w-full bg-green-500 text-white hover:bg-green-600 rounded-md py-2 px-4 font-semibold flex items-center justify-center gap-2" onClick={() => setShowQR(true)}>
-                    <QrCode className="w-4 h-4 text-white opacity-90" />
-                    Conectar Agora
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <div className="flex-1 p-4 overflow-hidden flex flex-col">
-              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap ">
-                <div className="flex items-center gap-3 absolute left-[10%]">
-                  <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={clearTagSelection}
-                    className={`px-3 py-1 rounded-full text-sm ${selectedTagIds.size === 0 ? 'bg-green-600 text-white' : 'bg-white border'}`}
-                  >
-                    Todas
-                  </button>
-                  {availableTags.map(tag => {
-                    const selected = selectedTagIds.has(tag.id);
-                    return (
->>>>>>> bf5d11c (ADD_Columns_Leads_Quente_Frio)
                       <button
                         onClick={() => setSearchTerm("")}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-gray-700"
@@ -1159,11 +1114,7 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-<<<<<<< HEAD
                 <div className="ml-auto flex-shrink-0">
-=======
-                <div className="ml-auto ">
->>>>>>> bf5d11c (ADD_Columns_Leads_Quente_Frio)
                   <button
                     onClick={exportFilteredToCSV}
                     className="flex items-center gap-2 px-3 py-1 rounded-md bg-white border hover:bg-gray-50"
