@@ -14,7 +14,6 @@ import {
   MessageCircle,
   File,
   Repeat,
-  Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
@@ -350,7 +349,7 @@ const SettingsPanel: React.FC<{
       <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
         <div className="absolute inset-0 bg-black/30" onClick={() => setShowAccountInfo(false)} />
 
-  <div className="relative bg-base-100 rounded-lg shadow-lg max-w-full sm:max-w-2xl w-full p-6 z-10 mt-20 max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 z-10 mt-20 max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-800">Informações da Conta</h2>
             <button className="p-2 rounded-md hover:bg-gray-100" onClick={() => setShowAccountInfo(false)} aria-label="Voltar">
@@ -467,9 +466,9 @@ const SettingsPanel: React.FC<{
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-  <div className="relative bg-base-100 rounded-lg shadow-lg max-w-full sm:max-w-3xl w-full p-6 z-10 mt-20">
+      <div className="relative bg-white rounded-lg shadow-lg max-w-3xl w-full p-6 z-10 mt-20">
         <div className="flex items-start justify-between">
           <h2 className="text-2xl font-bold text-gray-800">Configurações</h2>
           <button className="p-2 rounded-md hover:bg-gray-100" onClick={onClose} aria-label="Fechar">
@@ -516,44 +515,14 @@ const Dashboard: React.FC = () => {
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const [availableTags, setAvailableTags] = useState<Array<{ id: string; name: string; color: string }>>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
-
-  // Memoized filtered chats — must be declared unconditionally to respect Rules of Hooks
-  const normalizeDigits = (s?: string) => (s || "").replace(/\D/g, "");
-
-  // debounce searchTerm -> debouncedSearchTerm
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearchTerm(searchTerm.trim()), 300);
-    return () => clearTimeout(id);
-  }, [searchTerm]);
 
   const filteredChatsData = React.useMemo(() => {
     if (!chatsData) return chatsData;
+    if (selectedTagIds.size === 0) return chatsData;
 
-    const tagFiltered = selectedTagIds.size === 0
-      ? chatsData.chats
-      : chatsData.chats.filter(chat => chat.tags.some(t => selectedTagIds.has(t.id)));
-
-    const term = debouncedSearchTerm.toLowerCase();
-    if (!term) return { ...chatsData, chats: tagFiltered };
-
-    const digitsTerm = normalizeDigits(term);
-
-    const searched = tagFiltered.filter(chat => {
-      const name = (chat.name || "").toLowerCase();
-      const phone = (chat.phone || "").toLowerCase();
-      const phoneDigits = normalizeDigits(chat.phone || "");
-
-      // match name contains term OR phone contains term OR phone digits contains digitsTerm
-      if (name.includes(term)) return true;
-      if (phone.includes(term)) return true;
-      if (digitsTerm && phoneDigits.includes(digitsTerm)) return true;
-      return false;
-    });
-
-    return { ...chatsData, chats: searched };
-  }, [chatsData, selectedTagIds, debouncedSearchTerm]);
+    const filtered = { ...chatsData, chats: chatsData.chats.filter(chat => chat.tags.some(t => selectedTagIds.has(t.id))) };
+    return filtered;
+  }, [chatsData, selectedTagIds]);
   
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   
@@ -960,7 +929,7 @@ const Dashboard: React.FC = () => {
 
   if (!dashboardData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#f4f8f9] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
           <p className="text-gray-600">Carregando dados...</p>
@@ -971,7 +940,7 @@ const Dashboard: React.FC = () => {
 
   if (isCheckingConnection) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#f4f8f9] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
           <p className="text-gray-600">Verificando conexão WhatsApp...</p>
@@ -990,7 +959,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex relative">
+    <div className="min-h-screen bg-[#f4f8f9] flex relative">
       <Sidebar
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
@@ -1015,24 +984,13 @@ const Dashboard: React.FC = () => {
       />
 
       <div className="flex-1 flex flex-col">
-        <header className="bg-base-100 border-b border-base-200 relative">
-          <div className="px-2 sm:px-4 py-3 flex items-center">
-            <button className="ml-2 sm:ml-6 p-2" onClick={() => setShowSidebar(true)} aria-label="Abrir menu">
+        <header className="bg-white border-b border-gray-200 relative">
+          <div className="px-4 py-3 flex items-center">
+            <button className="ml-6 p-2" onClick={() => setShowSidebar(true)} aria-label="Abrir menu">
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
 
-            {/* Mobile compact title */}
-            <div className="flex items-center gap-3 sm:hidden ml-2">
-              <div className="p-1 bg-gradient-to-b from-green-400 to-green-600 rounded-md flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <h1 className="text-sm font-semibold text-[#1a1a1a]">WhatsApp Monitor</h1>
-              </div>
-            </div>
-
-            {/* Desktop/Tablet centered title */}
-            <div className="hidden sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex sm:items-center sm:gap-3">
+            <div className="absolute left-[38%] -translate-x-1/2 flex items-center gap-3">
               <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>
@@ -1051,70 +1009,53 @@ const Dashboard: React.FC = () => {
 
         <main className="flex-1 flex flex-col overflow-hidden">
           {!isConnected || !chatsData ? (
-            <Card className="shadow-md max-w-sm w-full rounded-lg">
-              <CardHeader className="text-center pt-8">
-                <div className="p-6 bg-secondary rounded-full w-fit mx-auto mb-4">
-                  <QrCode className="w-10 h-10 text-[#7f8b91]" />
-                </div>
-                <CardTitle className="text-base font-semibold text-gray-800">Conecte seu WhatsApp Business</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center pb-8">
-                <p className="text-sm text-gray-500 mb-6">Para começar a monitorar suas conversas, conecte sua conta do WhatsApp Business.</p>
-                <Button className="w-full bg-green-500 text-white hover:bg-green-600 rounded-md py-2 px-4 font-semibold flex items-center justify-center gap-2" onClick={() => setShowQR(true)}>
-                  <QrCode className="w-4 h-4 text-white opacity-90" />
-                  Conectar Agora
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex-1 flex items-center justify-center p-4">
+              <Card className="shadow-md max-w-sm w-full rounded-lg">
+                <CardHeader className="text-center pt-8">
+                  <div className="p-6 bg-[#edf2f3] rounded-full w-fit mx-auto mb-4">
+                    <QrCode className="w-10 h-10 text-[#7f8b91]" />
+                  </div>
+                  <CardTitle className="text-base font-semibold text-gray-800">Conecte seu WhatsApp Business</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center pb-8">
+                  <p className="text-sm text-gray-500 mb-6">Para começar a monitorar suas conversas, conecte sua conta do WhatsApp Business.</p>
+                  <Button className="w-full bg-green-500 text-white hover:bg-green-600 rounded-md py-2 px-4 font-semibold flex items-center justify-center gap-2" onClick={() => setShowQR(true)}>
+                    <QrCode className="w-4 h-4 text-white opacity-90" />
+                    Conectar Agora
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           ) : (
-            <div className="w-full max-w-6xl">
-              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="relative w-full max-w-lg">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Pesquisar por nome ou telefone..."
-                      className="pl-10 pr-10"
-                    />
-                    {searchTerm && (
+            <div className="flex-1 p-4 overflow-hidden flex flex-col">
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap ">
+                <div className="flex items-center gap-3 absolute left-[10%]">
+                  <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={clearTagSelection}
+                    className={`px-3 py-1 rounded-full text-sm ${selectedTagIds.size === 0 ? 'bg-green-600 text-white' : 'bg-white border'}`}
+                  >
+                    Todas
+                  </button>
+                  {availableTags.map(tag => {
+                    const selected = selectedTagIds.has(tag.id);
+                    return (
                       <button
-                        onClick={() => setSearchTerm("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-gray-700"
-                        aria-label="Limpar busca"
+                        key={tag.id}
+                        onClick={() => toggleTagSelection(tag.id)}
+                        className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 border ${selected ? '' : 'bg-white'}`}
+                        style={selected ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
                       >
-                        <X className="w-4 h-4" />
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                        {tag.name}
                       </button>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                    <button
-                      onClick={clearTagSelection}
-                      className={`flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium ${selectedTagIds.size === 0 ? 'bg-green-600 text-white' : 'bg-white border'}`}
-                    >
-                      <span className="hidden sm:inline">Todas</span>
-                    </button>
-
-                    {availableTags.map(tag => {
-                      const selected = selectedTagIds.has(tag.id);
-                      return (
-                        <button
-                          key={tag.id}
-                          onClick={() => toggleTagSelection(tag.id)}
-                          className={`flex items-center gap-2 px-2 py-0.5 rounded-full text-xs border ${selected ? '' : 'bg-white'}`}
-                          style={selected ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
-                        >
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                          <span className="truncate max-w-[8rem]">{tag.name}</span>
-                        </button>
-                      );
-                    })}
+                    );
+                  })}
                   </div>
                 </div>
 
-                <div className="ml-auto flex-shrink-0">
+                <div className="ml-auto ">
                   <button
                     onClick={exportFilteredToCSV}
                     className="flex items-center gap-2 px-3 py-1 rounded-md bg-white border hover:bg-gray-50"
