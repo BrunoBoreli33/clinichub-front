@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause } from "lucide-react";
 import { buildUrl } from "@/lib/api";
 import EmojiPicker from "./EmojiPicker";
+import PreConfiguredTextsPicker from "./PreConfiguredTextsPicker";
 
 interface Tag {
   id: string;
@@ -346,6 +347,14 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     }, 0);
   };
 
+  const handlePreConfiguredTextSelect = (content: string) => {
+    setNewMessage(content);
+    setShouldAutoFocus(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  };
+
   const startEdit = (message: Message) => {
     setEditingMessageId(message.messageId);
     setEditContent(message.content);
@@ -583,6 +592,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           <div className="p-3 sm:p-4 safe-bg border-t border-base-200">
             <div className="flex items-center gap-2">
               <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+              <PreConfiguredTextsPicker onSelectText={handlePreConfiguredTextSelect} />
               <Input
                 ref={inputRef}
                 value={newMessage}

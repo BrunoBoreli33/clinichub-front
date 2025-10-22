@@ -24,6 +24,7 @@ import QRConnection from "@/components/QRConnection";
 import ChatColumns from "@/components/ChatColumns";
 import TagManager from "@/components/TagManager";
 import RoutinesModal from "@/components/RoutinesModal";
+import PreConfiguredTextsModal from "@/components/PreConfiguredTextsModal";
 import * as tagApi from "@/api/tags";
 import { logError } from "@/lib/logger";
 import Toast from "@/components/Toast";
@@ -46,11 +47,12 @@ const Sidebar: React.FC<{
   onClose: () => void;
   onOpenTags: () => void;
   onOpenRoutines: () => void;
+  onOpenPreConfiguredTexts: () => void;
   onOpenSettings: () => void;
   onLogout: () => void;
   isOpen: boolean;
   userName: string;
-}> = ({ onClose, onOpenTags, onOpenRoutines, onOpenSettings, onLogout, isOpen, userName }) => {
+}> = ({ onClose, onOpenTags, onOpenRoutines, onOpenPreConfiguredTexts, onOpenSettings, onLogout, isOpen, userName }) => {
   const [visible, setVisible] = useState(isOpen);
 
   useEffect(() => {
@@ -114,6 +116,16 @@ const Sidebar: React.FC<{
             <Repeat className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
             <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
               Rotinas Automáticas
+            </span>
+          </button>
+
+          <button
+            className="w-full text-left flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            onClick={onOpenPreConfiguredTexts}
+          >
+            <File className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+            <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
+              Textos Pré-Configurados
             </span>
           </button>
 
@@ -496,6 +508,7 @@ const Dashboard: React.FC = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showRoutines, setShowRoutines] = useState(false);
+  const [showPreConfiguredTexts, setShowPreConfiguredTexts] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [chatsData, setChatsData] = useState<ChatsData | null>(null);
   const [toast, setToast] = useState<{ message: string; description?: string; variant?: string } | null>(null);
@@ -995,6 +1008,10 @@ const Dashboard: React.FC = () => {
           setShowRoutines(true);
           setShowSidebar(false);
         }}
+        onOpenPreConfiguredTexts={() => {
+          setShowPreConfiguredTexts(true);
+          setShowSidebar(false);
+        }}
         onOpenSettings={() => {
           setShowSettings(true);
           setShowSidebar(false);
@@ -1189,6 +1206,9 @@ const Dashboard: React.FC = () => {
             onClose={() => setShowRoutines(false)}
             showToast={showToast}
           />
+        )}
+        {showPreConfiguredTexts && (
+          <PreConfiguredTextsModal onClose={() => setShowPreConfiguredTexts(false)} />
         )}
         {showSettings && (
           <SettingsPanel 
