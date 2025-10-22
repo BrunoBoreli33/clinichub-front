@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2 } from "lucide-react";
+import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 import * as tagApi from "@/api/tags";
 import { logError } from "@/lib/logger";
@@ -148,9 +148,6 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
   );
 };
 
-// ✅ REMOVIDA: Função de estilo permanente
-// Agora o estilo é aplicado dinamicamente apenas durante o drag
-
 interface ChatColumnProps {
   id: string;
   title: string;
@@ -225,9 +222,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     setSortOrder(prev => prev === "recent" ? "oldest" : "recent");
   };
 
-  // ✅ Função para lidar com movimentação via dropdown
   const handleMoveFromDropdown = (chatId: string, toColumnId: string) => {
-    // Validar se está tentando mover para Repescagem
     if (toColumnId === "repescagem") {
       showToast?.({
         message: "Movimentação bloqueada",
@@ -240,7 +235,52 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     onMoveChat(chatId, id, toColumnId);
   };
 
-  // ✅ Verificar se a coluna é Repescagem
+  // ✅ NOVA FUNÇÃO: Resetar rotinas do chat
+  const handleResetRoutine = async (chatId: string, chatName: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showToast?.({
+          message: "Erro de autenticação",
+          description: "Token não encontrado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(buildUrl(`/dashboard/chats/${chatId}/reset-routine`), {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showToast?.({
+          message: "Rotinas resetadas",
+          description: `As rotinas do chat "${chatName}" foram resetadas com sucesso`,
+        });
+        onRefresh?.();
+      } else {
+        showToast?.({
+          message: "Erro ao resetar rotinas",
+          description: data.message || "Ocorreu um erro desconhecido",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      logError('Erro ao resetar rotinas do chat', error);
+      showToast?.({
+        message: "Erro ao resetar rotinas",
+        description: "Não foi possível resetar as rotinas",
+        variant: "destructive",
+      });
+    }
+  };
+
   const isRepescagemColumn = title === "Repescagem";
 
   return (
@@ -454,6 +494,19 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                               <TagIcon className="mr-2 h-3 w-3" />
                               Gerenciar Etiquetas
                             </DropdownMenuItem>
+                            
+                            {/* ✅ NOVA OPÇÃO: Resetar Rotinas */}
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleResetRoutine(chat.id, chat.name);
+                              }}
+                              className="text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                            >
+                              <RotateCcw className="mr-2 h-3 w-3" />
+                              Resetar Rotinas
+                            </DropdownMenuItem>
+                            
                             <DropdownMenuSeparator />
                             <DropdownMenuItem disabled className="text-xs">
                               <MoveRight className="mr-2 h-3 w-3" />
@@ -566,7 +619,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   }, [chatsData]);
 
   const moveChat = async (chatId: string, fromColumn: string, toColumn: string) => {
-    // ✅ VALIDAÇÃO: Bloquear movimentação para Repescagem
     if (toColumn === "repescagem") {
       showToast?.({
         message: "Movimentação bloqueada",
@@ -644,6 +696,15 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
     const fromColumn = source.droppableId;
     const toColumn = destination.droppableId;
     const chatId = draggableId;
+
+    if (fromColumn === "repescagem") {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "Chats na coluna 'Repescagem' só podem ser movidos automaticamente pelo sistema de rotinas.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (fromColumn !== toColumn) {
       moveChat(chatId, fromColumn, toColumn);
