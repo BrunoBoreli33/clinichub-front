@@ -642,6 +642,7 @@ const Dashboard: React.FC = () => {
     debouncedFetchChats(true, 300);
   }, [debouncedFetchChats]);
 
+  // ✅ MODIFICADO: Atualizar imediatamente ao receber mensagem (sem debounce)
   const handleNewMessage = useCallback((data: NewMessageNotification) => {
     console.log('📨 Nova mensagem recebida via SSE:', {
       chatId: data.chatId,
@@ -650,30 +651,29 @@ const Dashboard: React.FC = () => {
       unreadCount: data.unreadCount
     });
     
-    if (isConnected && chatsData) {
-      debouncedFetchChats(true, 500);
-    }
+    // ✅ MODIFICADO: Atualizar imediatamente sem debounce
+    fetchChats(true);
 
     window.dispatchEvent(new CustomEvent('sse-new-message', {
       detail: { type: 'new-message', data }
     }));
-  }, [isConnected, chatsData, debouncedFetchChats]);
+  }, [fetchChats]);
 
+  // ✅ MODIFICADO: Atualizar imediatamente ao enviar mensagem (sem debounce)
   const handleChatUpdate = useCallback((data: ChatUpdateNotification) => {
-    console.log('🔄 Atualização de chat via SSE (mensagem enviada):', {
+    console.log('📤 Atualização de chat via SSE (mensagem enviada):', {
       chatId: data.chatId,
       chatName: data.chatName,
       lastMessageContent: data.lastMessageContent?.substring(0, 30) + '...'
     });
     
-    if (isConnected && chatsData) {
-      debouncedFetchChats(true, 500);
-    }
+    // ✅ MODIFICADO: Atualizar imediatamente sem debounce
+    fetchChats(true);
 
     window.dispatchEvent(new CustomEvent('sse-chat-update', {
       detail: { type: 'chat-update', data }
     }));
-  }, [isConnected, chatsData, debouncedFetchChats]);
+  }, [fetchChats]);
 
   const handleTagUpdate = useCallback((data: TagUpdateNotification) => {
     console.log('🏷️ Atualização de tag via SSE:', data);
