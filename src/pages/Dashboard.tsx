@@ -13,12 +13,18 @@ import {
   User,
   MessageCircle,
   File,
+<<<<<<< HEAD
   Search,
+=======
+  Repeat,
+>>>>>>> 7aae6f5 (Rotinas_V0.0_Modo_DEV)
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
 import ChatColumns from "@/components/ChatColumns";
 import TagManager from "@/components/TagManager";
+import RoutinesModal from "@/components/RoutinesModal";
+import PreConfiguredTextsModal from "@/components/PreConfiguredTextsModal";
 import * as tagApi from "@/api/tags";
 import { logError } from "@/lib/logger";
 import Toast from "@/components/Toast";
@@ -40,11 +46,13 @@ interface DashboardData {
 const Sidebar: React.FC<{
   onClose: () => void;
   onOpenTags: () => void;
+  onOpenRoutines: () => void;
+  onOpenPreConfiguredTexts: () => void;
   onOpenSettings: () => void;
   onLogout: () => void;
   isOpen: boolean;
   userName: string;
-}> = ({ onClose, onOpenTags, onOpenSettings, onLogout, isOpen, userName }) => {
+}> = ({ onClose, onOpenTags, onOpenRoutines, onOpenPreConfiguredTexts, onOpenSettings, onLogout, isOpen, userName }) => {
   const [visible, setVisible] = useState(isOpen);
 
   useEffect(() => {
@@ -98,6 +106,26 @@ const Sidebar: React.FC<{
             <Tag className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
             <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
               Gerenciar Etiquetas
+            </span>
+          </button>
+
+          <button
+            className="w-full text-left flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            onClick={onOpenRoutines}
+          >
+            <Repeat className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+            <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
+              Rotinas Automáticas
+            </span>
+          </button>
+
+          <button
+            className="w-full text-left flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            onClick={onOpenPreConfiguredTexts}
+          >
+            <File className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+            <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
+              Textos Pré-Configurados
             </span>
           </button>
 
@@ -479,6 +507,8 @@ const Dashboard: React.FC = () => {
   const [showTagManager, setShowTagManager] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showRoutines, setShowRoutines] = useState(false);
+  const [showPreConfiguredTexts, setShowPreConfiguredTexts] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [chatsData, setChatsData] = useState<ChatsData | null>(null);
   const [toast, setToast] = useState<{ message: string; description?: string; variant?: string } | null>(null);
@@ -492,6 +522,7 @@ const Dashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
 
+<<<<<<< HEAD
   // Memoized filtered chats — must be declared unconditionally to respect Rules of Hooks
   const normalizeDigits = (s?: string) => (s || "").replace(/\D/g, "");
 
@@ -501,6 +532,8 @@ const Dashboard: React.FC = () => {
     return () => clearTimeout(id);
   }, [searchTerm]);
 
+=======
+>>>>>>> bf5d11c (ADD_Columns_Leads_Quente_Frio)
   const filteredChatsData = React.useMemo(() => {
     if (!chatsData) return chatsData;
 
@@ -532,10 +565,9 @@ const Dashboard: React.FC = () => {
   
   const hasCheckedInitialConnection = useRef(false);
   
-  // ✅ NOVO: Refs para controle de debounce
   const fetchChatsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
-  const minFetchInterval = 1000; // Mínimo de 1 segundo entre chamadas
+  const minFetchInterval = 1000;
 
   const showToast = useCallback(({ message, description, variant = "default" }: { message: string; description?: string; variant?: string }) => {
     setToast({ message, description, variant });
@@ -555,7 +587,6 @@ const Dashboard: React.FC = () => {
     setDashboardData(updatedData);
   }, []);
 
-  // ✅ Buscar chats (com suporte a reload silencioso)
   const fetchChats = useCallback(async (silent = false) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -600,14 +631,11 @@ const Dashboard: React.FC = () => {
     }
   }, [showToast]);
 
-  // ✅ NOVO: Debounced fetch para evitar chamadas excessivas
   const debouncedFetchChats = useCallback((silent: boolean = false, delay: number = 500) => {
-    // Limpar timeout anterior
     if (fetchChatsTimeoutRef.current) {
       clearTimeout(fetchChatsTimeoutRef.current);
     }
 
-    // Verificar intervalo mínimo desde a última chamada
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchTimeRef.current;
     
@@ -616,20 +644,18 @@ const Dashboard: React.FC = () => {
       return;
     }
 
-    // Agendar nova chamada com debounce
     fetchChatsTimeoutRef.current = setTimeout(() => {
       lastFetchTimeRef.current = Date.now();
       fetchChats(silent);
     }, delay);
   }, [fetchChats, minFetchInterval]);
 
-  // ✅ NOVO: Callback para recarregar chats silenciosamente ao fechar ChatWindow
   const reloadChats = useCallback(() => {
     console.log("🔄 Recarregando chats após fechar ChatWindow");
     debouncedFetchChats(true, 300);
   }, [debouncedFetchChats]);
 
-  // ✅ CORRIGIDO: Callback para processar novas mensagens recebidas via SSE (fromMe: false)
+  // ✅ MODIFICADO: Atualizar imediatamente ao receber mensagem (sem debounce)
   const handleNewMessage = useCallback((data: NewMessageNotification) => {
     console.log('📨 Nova mensagem recebida via SSE:', {
       chatId: data.chatId,
@@ -638,60 +664,51 @@ const Dashboard: React.FC = () => {
       unreadCount: data.unreadCount
     });
     
-    showToast({
-      message: `Nova mensagem de ${data.chatName}`,
-      description: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : ''),
-      variant: "default"
-    });
+    // ✅ MODIFICADO: Atualizar imediatamente sem debounce
+    fetchChats(true);
 
-    // ✅ Usar debounced fetch para evitar múltiplas chamadas
-    if (isConnected && chatsData) {
-      debouncedFetchChats(true, 500);
-    }
-  }, [isConnected, chatsData, showToast, debouncedFetchChats]);
+    window.dispatchEvent(new CustomEvent('sse-new-message', {
+      detail: { type: 'new-message', data }
+    }));
+  }, [fetchChats]);
 
-  // ✅ CORRIGIDO: Callback para processar atualizações de chat via SSE (fromMe: true)
+  // ✅ MODIFICADO: Atualizar imediatamente ao enviar mensagem (sem debounce)
   const handleChatUpdate = useCallback((data: ChatUpdateNotification) => {
-    console.log('🔄 Atualização de chat via SSE (mensagem enviada):', {
+    console.log('📤 Atualização de chat via SSE (mensagem enviada):', {
       chatId: data.chatId,
       chatName: data.chatName,
       lastMessageContent: data.lastMessageContent?.substring(0, 30) + '...'
     });
     
-    // ✅ Atualizar chats silenciosamente com debounce (sem toast, sem som)
-    if (isConnected && chatsData) {
-      debouncedFetchChats(true, 500);
-    }
-  }, [isConnected, chatsData, debouncedFetchChats]);
+    // ✅ MODIFICADO: Atualizar imediatamente sem debounce
+    fetchChats(true);
 
-  // ✅ CORRIGIDO: Callback para processar atualização de tag via SSE
+    window.dispatchEvent(new CustomEvent('sse-chat-update', {
+      detail: { type: 'chat-update', data }
+    }));
+  }, [fetchChats]);
+
   const handleTagUpdate = useCallback((data: TagUpdateNotification) => {
     console.log('🏷️ Atualização de tag via SSE:', data);
     
-    // Recarregar chats silenciosamente para atualizar as tags nos chats
     if (isConnected && chatsData) {
       debouncedFetchChats(true, 500);
     }
     
-    // Incrementar versão das tags para forçar re-render do TagManager se estiver aberto
     setTagsVersion(prev => prev + 1);
   }, [isConnected, chatsData, debouncedFetchChats]);
 
-  // ✅ CORRIGIDO: Callback para processar exclusão de tag via SSE
   const handleTagDelete = useCallback((data: TagDeleteNotification) => {
     console.log('🗑️ Exclusão de tag via SSE:', data);
     
-    // Recarregar chats silenciosamente para remover tags excluídas dos chats
     if (isConnected && chatsData) {
       debouncedFetchChats(true, 500);
     }
     
-    // Incrementar versão das tags para forçar re-render do TagManager se estiver aberto
     setTagsVersion(prev => prev + 1);
   }, [isConnected, chatsData, debouncedFetchChats]);
 
-  // ✅ Conectar ao sistema de notificações SSE com handlers
-  useNotifications({
+  const { setOpenChatId } = useNotifications({
     onNewMessage: handleNewMessage,
     onChatUpdate: handleChatUpdate,
     onTagUpdate: handleTagUpdate,
@@ -939,7 +956,6 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(checkConnectionInterval);
   }, [isConnected, chatsData, showToast]);
 
-  // Cleanup de timeouts ao desmontar
   useEffect(() => {
     return () => {
       if (fetchChatsTimeoutRef.current) {
@@ -988,6 +1004,14 @@ const Dashboard: React.FC = () => {
           setShowTagManager(true);
           setShowSidebar(false);
         }}
+        onOpenRoutines={() => {
+          setShowRoutines(true);
+          setShowSidebar(false);
+        }}
+        onOpenPreConfiguredTexts={() => {
+          setShowPreConfiguredTexts(true);
+          setShowSidebar(false);
+        }}
         onOpenSettings={() => {
           setShowSettings(true);
           setShowSidebar(false);
@@ -1003,6 +1027,7 @@ const Dashboard: React.FC = () => {
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
 
+<<<<<<< HEAD
             {/* Mobile compact title */}
             <div className="flex items-center gap-3 sm:hidden ml-2">
               <div className="p-1 bg-gradient-to-b from-green-400 to-green-600 rounded-md flex items-center justify-center">
@@ -1015,6 +1040,9 @@ const Dashboard: React.FC = () => {
 
             {/* Desktop/Tablet centered title */}
             <div className="hidden sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex sm:items-center sm:gap-3">
+=======
+            <div className="absolute left-[38%] -translate-x-1/2 flex items-center gap-3">
+>>>>>>> bf5d11c (ADD_Columns_Leads_Quente_Frio)
               <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>
@@ -1031,8 +1059,9 @@ const Dashboard: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 flex items-start justify-center p-4 pt-8">
+        <main className="flex-1 flex flex-col overflow-hidden">
           {!isConnected || !chatsData ? (
+<<<<<<< HEAD
             <Card className="shadow-md max-w-sm w-full rounded-lg">
               <CardHeader className="text-center pt-8">
                 <div className="p-6 bg-secondary rounded-full w-fit mx-auto mb-4">
@@ -1061,6 +1090,40 @@ const Dashboard: React.FC = () => {
                       className="pl-10 pr-10"
                     />
                     {searchTerm && (
+=======
+            <div className="flex-1 flex items-center justify-center p-4">
+              <Card className="shadow-md max-w-sm w-full rounded-lg">
+                <CardHeader className="text-center pt-8">
+                  <div className="p-6 bg-[#edf2f3] rounded-full w-fit mx-auto mb-4">
+                    <QrCode className="w-10 h-10 text-[#7f8b91]" />
+                  </div>
+                  <CardTitle className="text-base font-semibold text-gray-800">Conecte seu WhatsApp Business</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center pb-8">
+                  <p className="text-sm text-gray-500 mb-6">Para começar a monitorar suas conversas, conecte sua conta do WhatsApp Business.</p>
+                  <Button className="w-full bg-green-500 text-white hover:bg-green-600 rounded-md py-2 px-4 font-semibold flex items-center justify-center gap-2" onClick={() => setShowQR(true)}>
+                    <QrCode className="w-4 h-4 text-white opacity-90" />
+                    Conectar Agora
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="flex-1 p-4 overflow-hidden flex flex-col">
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap ">
+                <div className="flex items-center gap-3 absolute left-[10%]">
+                  <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={clearTagSelection}
+                    className={`px-3 py-1 rounded-full text-sm ${selectedTagIds.size === 0 ? 'bg-green-600 text-white' : 'bg-white border'}`}
+                  >
+                    Todas
+                  </button>
+                  {availableTags.map(tag => {
+                    const selected = selectedTagIds.has(tag.id);
+                    return (
+>>>>>>> bf5d11c (ADD_Columns_Leads_Quente_Frio)
                       <button
                         onClick={() => setSearchTerm("")}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-gray-700"
@@ -1096,26 +1159,32 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
+<<<<<<< HEAD
                 <div className="ml-auto flex-shrink-0">
+=======
+                <div className="ml-auto ">
+>>>>>>> bf5d11c (ADD_Columns_Leads_Quente_Frio)
                   <button
                     onClick={exportFilteredToCSV}
                     className="flex items-center gap-2 px-3 py-1 rounded-md bg-white border hover:bg-gray-50"
                     title="Exportar conversas filtradas para CSV"
                   >
-                    <File className="w-4 h-4" />
+                    <File className="w-4 h-4 " />
                     <span className="text-sm">Exportar</span>
                   </button>
                 </div>
               </div>
 
-              <ChatColumns 
-                chatsData={filteredChatsData} 
-                showToast={showToast} 
-                tagsVersion={tagsVersion}
-                onChatClosed={reloadChats}
-              />
+              <div className="flex-1 overflow-hidden">
+                <ChatColumns 
+                  chatsData={filteredChatsData} 
+                  showToast={showToast} 
+                  tagsVersion={tagsVersion}
+                  onChatClosed={reloadChats}
+                  setOpenChatId={setOpenChatId}
+                />
+              </div>
             </div>
-            
           )}
         </main>
 
@@ -1131,6 +1200,15 @@ const Dashboard: React.FC = () => {
               });
             }} 
           />
+        )}
+        {showRoutines && (
+          <RoutinesModal 
+            onClose={() => setShowRoutines(false)}
+            showToast={showToast}
+          />
+        )}
+        {showPreConfiguredTexts && (
+          <PreConfiguredTextsModal onClose={() => setShowPreConfiguredTexts(false)} />
         )}
         {showSettings && (
           <SettingsPanel 

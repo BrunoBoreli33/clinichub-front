@@ -8,9 +8,28 @@ const defaultHeaders = () => {
   } as Record<string, string>;
 };
 
-export type ApiFetchOptions = RequestInit & { skipAutoReload?: boolean };
+export type ApiFetchOptions = RequestInit & { 
+  skipAutoReload?: boolean;
+};
 
-export async function apiFetch(path: string, opts: ApiFetchOptions = {}) {
+// ✅ Tipo para a resposta da API
+export interface ApiResponse<T = unknown> {
+  success?: boolean;
+  message?: string;
+  data?: T;
+  [key: string]: unknown;
+}
+
+// ✅ Tipo para erros da API
+export interface ApiError extends Error {
+  status: number;
+  data: ApiResponse | null;
+}
+
+export async function apiFetch<T = unknown>(
+  path: string, 
+  opts: ApiFetchOptions = {}
+): Promise<ApiResponse<T>> {
   const method = (opts.method || "GET").toUpperCase();
   const url = path.startsWith("http") ? path : buildUrl(path);
 
@@ -22,27 +41,40 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}) {
   };
 
   const res = await fetch(url, init);
-  let data: any = null;
+  
+  // ✅ CORRIGIDO: Tipagem explícita para data
+  let data: ApiResponse<T> | null = null;
   try {
-    data = await res.json();
+    data = await res.json() as ApiResponse<T>;
   } catch (e) {
     // ignore JSON parse errors for non-json responses
   }
 
-  // NOTE: previous behavior dispatched an event and automatically reloaded the page
-  // after successful mutations. That behavior was removed to avoid full page reloads
-  // on POST/PUT/DELETE/PATCH. Callers should update UI state or listen to
-  // 'app:backend-mutated' if needed (event dispatch removed to avoid surprises).
+  // ✅ Dispatch evento para listeners, mas SEM reload automático
+  const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(method);
+  const success = res.ok && (data === null || data.success === undefined || data.success === true);
+
+  if (isMutation && success) {
+    // Dispatch an event for listeners
+    try {
+      window.dispatchEvent(new CustomEvent('app:backend-mutated', { 
+        detail: { path, method, data } 
+      }));
+    } catch (e) {
+      // noop
+    }
+  }
 
   if (!res.ok) {
     const message = data?.message || `Request failed with status ${res.status}`;
-    const err: any = new Error(message);
+    const err = new Error(message) as ApiError;
     err.status = res.status;
     err.data = data;
     throw err;
   }
 
-  return data;
+  // ✅ CORRIGIDO: Retorna objeto vazio tipado se data for null
+  return data ?? {} as ApiResponse<T>;
 }
 
 export default apiFetch;
