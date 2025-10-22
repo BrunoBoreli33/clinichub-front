@@ -87,7 +87,7 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
 
       const result = await response.json();
       if (result.success) {
-        showToast({ message: result.message });
+        showToast({ message: existing ? "Rotina atualizada!" : "Rotina criada!" });
         loadRoutines();
         setEditingId(null);
       } else {
@@ -101,7 +101,6 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
 
   const handleDelete = async (id: string) => {
     const token = localStorage.getItem("token");
-
     try {
       const response = await fetch(buildUrl(`/dashboard/routines/${id}`), {
         method: "DELETE",
@@ -112,7 +111,7 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
 
       const result = await response.json();
       if (result.success) {
-        showToast({ message: result.message });
+        showToast({ message: "Rotina removida!" });
         loadRoutines();
       } else {
         showToast({ message: result.message, variant: "destructive" });
@@ -123,7 +122,7 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
     }
   };
 
-  const updateFormData = (seq: number, field: "text" | "hours", value: string | number) => {
+  const updateFormData = (seq: number, field: "text" | "hours", value: string) => {
     setFormData(prev => ({
       ...prev,
       [seq]: {
@@ -190,7 +189,7 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
 
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">
-                      {seq === 1 ? "⚠️ DEV: Minutos para iniciar repescagem" : "⚠️ DEV: Minutos do próximo envio"}
+                      {seq === 1 ? "Horas para iniciar repescagem" : "Horas do próximo envio"}
                     </label>
                     <Input
                       type="number"
@@ -200,10 +199,10 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
                       onChange={e => updateFormData(seq, "hours", e.target.value)}
                       className="w-32"
                       disabled={!isEditing && !!routine}
-                      placeholder="0-48 minutos"
+                      placeholder="0-48 horas"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Valor em minutos para testes
+                      Valor em horas
                     </p>
                   </div>
 
