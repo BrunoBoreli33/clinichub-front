@@ -69,6 +69,9 @@ const ChatTagsModal = ({ chat, availableTags, onClose, onUpdate }: ChatTagsModal
     setIsSaving(true);
     try {
       await tagApi.setTagsForChat(chat.id, Array.from(selectedTagIds));
+
+      // Disparar evento para recarregar chats no Dashboard
+      window.dispatchEvent(new CustomEvent('tag-added-to-chat'));
       onUpdate();
       onClose();
     } catch (error) {
