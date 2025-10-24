@@ -1022,7 +1022,7 @@ const Dashboard: React.FC = () => {
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
 
-            <div className="absolute left-[38%] -translate-x-1/2 flex items-center gap-3">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-3">
               <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>

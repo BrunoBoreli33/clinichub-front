@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw } from "lucide-react";
+import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar } from "lucide-react";
 import ChatWindow from "./ChatWindow";
+import TaskModal from "./TaskModal";
 import * as tagApi from "@/api/tags";
 import { logError } from "@/lib/logger";
 import { buildUrl } from "@/lib/api";
@@ -160,11 +161,12 @@ interface ChatColumnProps {
   onChatSelect: (chat: Chat) => void;
   onMoveChat: (chatId: string, fromColumn: string, toColumn: string) => void;
   onOpenTagManager: (chat: Chat) => void;
+  onCreateTask: (chat: Chat) => void;
   onRefresh: () => void;
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
 }
 
-const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onRefresh, showToast }: ChatColumnProps) => {
+const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onRefresh, showToast }: ChatColumnProps) => {
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
     const saved = localStorage.getItem(`column-${id}-sortOrder`);
     return (saved as "recent" | "oldest") || "recent";
@@ -498,6 +500,18 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                               Gerenciar Etiquetas
                             </DropdownMenuItem>
                             
+                            {/* ✅ NOVA OPÇÃO: Criar Tarefa */}
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCreateTask(chat);
+                              }}
+                              className="text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                            >
+                              <Calendar className="mr-2 h-3 w-3" />
+                              Criar Tarefa
+                            </DropdownMenuItem>
+                            
                             {/* ✅ NOVA OPÇÃO: Resetar Rotinas */}
                             <DropdownMenuItem 
                               onClick={(e) => {
@@ -552,6 +566,8 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
 const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenChatId }: ChatColumnsProps) => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatForTagManager, setChatForTagManager] = useState<Chat | null>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [chatForTask, setChatForTask] = useState<Chat | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   
   const [chats, setChats] = useState<Record<string, Chat[]>>({
@@ -581,6 +597,23 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
     } catch (error) {
       logError("Erro ao carregar tags:", { error });
     }
+  };
+
+  const handleCreateTask = (chat: Chat) => {
+    setChatForTask(chat);
+    setShowTaskModal(true);
+  };
+
+  const handleTaskCreated = () => {
+    // Recarregar dados dos chats após criar tarefa
+    if (onChatClosed) {
+      onChatClosed();
+    }
+    
+    showToast?.({
+      message: "Tarefa criada com sucesso",
+      description: "O chat foi movido para a coluna Tarefas",
+    });
   };
 
   useEffect(() => {
@@ -805,6 +838,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
                 onChatSelect={setSelectedChat}
                 onMoveChat={moveChat}
                 onOpenTagManager={setChatForTagManager}
+                onCreateTask={handleCreateTask}
                 onRefresh={loadTags}
                 showToast={showToast}
               />
@@ -839,6 +873,15 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
           onUpdate={handleTagsUpdated}
         />
       )}
+
+      {/* Modal de Tarefa */}
+      <TaskModal
+        isOpen={showTaskModal}
+        onClose={() => setShowTaskModal(false)}
+        chat={chatForTask}
+        onTaskCreated={handleTaskCreated}
+        showToast={showToast}
+      />
     </>
   );
 };

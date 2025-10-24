@@ -1,18 +1,21 @@
-// ===== Componente ChatCard - ATUALIZADO =====
-// Este componente mostra o card de cada chat na lista
+// ===== ChatCard.tsx - MODIFICADO COM MENU DE 3 PONTOS =====
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Chat } from "@/types/chat";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Calendar, MoreVertical } from "lucide-react";
 
 interface ChatCardProps {
   chat: Chat;
   isSelected: boolean;
   onClick: () => void;
+  onCreateTask?: (chat: Chat) => void; // ✅ NOVO: Callback para criar tarefa
 }
 
-const ChatCard = ({ chat, isSelected, onClick }: ChatCardProps) => {
+const ChatCard = ({ chat, isSelected, onClick, onCreateTask }: ChatCardProps) => {
   const getInitials = (name: string) => {
     if (!name) return "?";
     return name.substring(0, 2).toUpperCase();
@@ -31,11 +34,16 @@ const ChatCard = ({ chat, isSelected, onClick }: ChatCardProps) => {
     }
   };
 
-  // ✅ NOVO: Função para truncar a última mensagem se necessário
   const truncateMessage = (message: string | null, maxLength: number = 30) => {
     if (!message) return "Sem mensagens";
     if (message.length <= maxLength) return message;
     return message.substring(0, maxLength) + "...";
+  };
+
+  // ✅ NOVO: Função para abrir modal de tarefa
+  const handleCreateTask = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Impedir que o click abra o chat
+    onCreateTask?.(chat);
   };
 
   return (
@@ -72,15 +80,37 @@ const ChatCard = ({ chat, isSelected, onClick }: ChatCardProps) => {
               {chat.name}
             </h4>
 
-            {/* Horário da Última Mensagem */}
-            {chat.lastMessageTime && (
-              <span className="text-xs text-gray-500 flex-shrink-0">
-                {formatTime(chat.lastMessageTime)}
-              </span>
-            )}
+            {/* ✅ NOVO: Menu de 3 pontos */}
+            <div className="flex items-center gap-1">
+              {/* Horário da Última Mensagem */}
+              {chat.lastMessageTime && (
+                <span className="text-xs text-gray-500 flex-shrink-0">
+                  {formatTime(chat.lastMessageTime)}
+                </span>
+              )}
+
+              {/* Menu de 3 pontos */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <MoreVertical className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleCreateTask}>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Criar Tarefa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
-          {/* ✅ MODIFICADO: Mostrar última mensagem ao invés do telefone */}
+          {/* Última mensagem */}
           <p className={`text-sm truncate ${
             chat.unread > 0 ? "font-semibold text-gray-900" : "text-gray-600"
           }`}>
