@@ -14,6 +14,7 @@ import {
   MessageCircle,
   File,
   Repeat,
+  Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
@@ -515,14 +516,31 @@ const Dashboard: React.FC = () => {
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const [availableTags, setAvailableTags] = useState<Array<{ id: string; name: string; color: string }>>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const filteredChatsData = React.useMemo(() => {
     if (!chatsData) return chatsData;
-    if (selectedTagIds.size === 0) return chatsData;
+    
+    let filtered = chatsData.chats;
+    
+    // Filtro por etiquetas
+    if (selectedTagIds.size > 0) {
+      filtered = filtered.filter(chat => chat.tags.some(t => selectedTagIds.has(t.id)));
+    }
+    
+    // Filtro por pesquisa (nome ou telefone)
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(chat => {
+        const name = (chat.name || '').toLowerCase();
+        const phone = (chat.phone || '').toLowerCase();
+        return name.includes(term) || phone.includes(term);
+      });
+    }
+    
+    return { ...chatsData, chats: filtered };
+  }, [chatsData, selectedTagIds, searchTerm]);
 
-    const filtered = { ...chatsData, chats: chatsData.chats.filter(chat => chat.tags.some(t => selectedTagIds.has(t.id))) };
-    return filtered;
-  }, [chatsData, selectedTagIds]);
   
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   
@@ -685,6 +703,20 @@ const Dashboard: React.FC = () => {
       setNotificationEnabled(false);
     }
   });
+
+  // Listener para quando uma tag é adicionada a um chat (disparado pelo ChatColumns)
+  useEffect(() => {
+    const handleTagAddedToChat = () => {
+      console.log('🏷️ Tag adicionada a um chat - recarregando chats');
+      fetchChats(true);
+    };
+
+    window.addEventListener('tag-added-to-chat', handleTagAddedToChat);
+
+    return () => {
+      window.removeEventListener('tag-added-to-chat', handleTagAddedToChat);
+    };
+  }, [fetchChats]);
 
   useEffect(() => {
     const validateSession = async () => {
@@ -990,7 +1022,7 @@ const Dashboard: React.FC = () => {
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
 
-            <div className="absolute left-[38%] -translate-x-1/2 flex items-center gap-3">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-3">
               <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>
@@ -1028,8 +1060,19 @@ const Dashboard: React.FC = () => {
             </div>
           ) : (
             <div className="flex-1 p-4 overflow-hidden flex flex-col">
-              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap ">
-                <div className="flex items-center gap-3 absolute left-[10%]">
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Pesquisar por nome ou telefone..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 pr-3 py-1 w-64 text-sm border rounded-md"
+                    />
+                  </div>
+
                   <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
                   <div className="flex items-center gap-2 flex-wrap">
                   <button
@@ -1055,7 +1098,7 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="ml-auto ">
+                <div className="ml-auto">
                   <button
                     onClick={exportFilteredToCSV}
                     className="flex items-center gap-2 px-3 py-1 rounded-md bg-white border hover:bg-gray-50"

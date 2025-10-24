@@ -1,5 +1,4 @@
 // src/api/tags.ts
-// ✅ Crie este arquivo SOMENTE se quiser separar as funções da API
 
 import { buildUrl } from "@/lib/api";
 import apiFetch from "@/lib/http";
@@ -26,28 +25,28 @@ const getAuthHeaders = () => {
 };
 
 /**
- * Buscar todas as tags do usuário
+ * Buscar todas as tags do usuÃ¡rio
  */
 export const getAllTags = async (): Promise<Tag[]> => {
-  const data = await apiFetch('/dashboard/tags', { method: 'GET' });
+  const data = await apiFetch<{ tags: Tag[] }>('/dashboard/tags', { method: 'GET' });
   if (!data || !data.tags) throw new Error('Erro ao buscar etiquetas');
-  return data.tags;
+  return data.tags as Tag[];
 };
 
 /**
  * Criar nova tag
  */
 export const createTag = async (tagData: TagRequest): Promise<Tag> => {
-  const data = await apiFetch('/dashboard/tags', { method: 'POST', body: JSON.stringify(tagData) });
-  return data.tag;
+  const data = await apiFetch<{ tag: Tag }>('/dashboard/tags', { method: 'POST', body: JSON.stringify(tagData) });
+  return data.tag as Tag;
 };
 
 /**
  * Atualizar tag existente
  */
 export const updateTag = async (tagId: string, tagData: TagRequest): Promise<Tag> => {
-  const data = await apiFetch(`/dashboard/tags/${tagId}`, { method: 'PUT', body: JSON.stringify(tagData) });
-  return data.tag;
+  const data = await apiFetch<{ tag: Tag }>(`/dashboard/tags/${tagId}`, { method: 'PUT', body: JSON.stringify(tagData) });
+  return data.tag as Tag;
 };
 
 /**

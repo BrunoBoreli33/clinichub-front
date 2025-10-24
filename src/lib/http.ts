@@ -1,5 +1,8 @@
 import { buildUrl } from "@/lib/api";
 
+// Re-exportar buildUrl para uso em outros módulos
+export { buildUrl };
+
 const defaultHeaders = () => {
   const token = localStorage.getItem("token");
   return {
@@ -8,11 +11,14 @@ const defaultHeaders = () => {
   } as Record<string, string>;
 };
 
+// Exportar getAuthHeaders como alias de defaultHeaders
+export const getAuthHeaders = defaultHeaders;
+
 export type ApiFetchOptions = RequestInit & { 
   skipAutoReload?: boolean;
 };
 
-// ✅ Tipo para a resposta da API
+// âœ… Tipo para a resposta da API
 export interface ApiResponse<T = unknown> {
   success?: boolean;
   message?: string;
@@ -20,7 +26,7 @@ export interface ApiResponse<T = unknown> {
   [key: string]: unknown;
 }
 
-// ✅ Tipo para erros da API
+// âœ… Tipo para erros da API
 export interface ApiError extends Error {
   status: number;
   data: ApiResponse | null;
@@ -42,7 +48,7 @@ export async function apiFetch<T = unknown>(
 
   const res = await fetch(url, init);
   
-  // ✅ CORRIGIDO: Tipagem explícita para data
+  // âœ… CORRIGIDO: Tipagem explÃ­cita para data
   let data: ApiResponse<T> | null = null;
   try {
     data = await res.json() as ApiResponse<T>;
@@ -50,7 +56,7 @@ export async function apiFetch<T = unknown>(
     // ignore JSON parse errors for non-json responses
   }
 
-  // ✅ Dispatch evento para listeners, mas SEM reload automático
+  // âœ… Dispatch evento para listeners, mas SEM reload automÃ¡tico
   const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(method);
   const success = res.ok && (data === null || data.success === undefined || data.success === true);
 
@@ -73,7 +79,7 @@ export async function apiFetch<T = unknown>(
     throw err;
   }
 
-  // ✅ CORRIGIDO: Retorna objeto vazio tipado se data for null
+  // âœ… CORRIGIDO: Retorna objeto vazio tipado se data for null
   return data ?? {} as ApiResponse<T>;
 }
 
