@@ -1,4 +1,4 @@
-// task.ts - FunÃ§Ãµes API para gerenciar tarefas
+// task.ts - FunÃƒÂ§ÃƒÂµes API para gerenciar tarefas
 
 import { buildUrl, getAuthHeaders } from "@/lib/http";
 
@@ -76,6 +76,24 @@ export const getTaskByChatId = async (chatId: string): Promise<Task> => {
 };
 
 /**
+ * Listar todas as tarefas de um chat
+ */
+export const getAllTasksByChat = async (chatId: string): Promise<Task[]> => {
+  const response = await fetch(buildUrl(`/api/tasks/chat/${chatId}/all`), {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Erro ao listar tarefas");
+  }
+
+  const data = await response.json();
+  return data.tasks;
+};
+
+/**
  * Atualizar tarefa
  */
 export const updateTask = async (
@@ -113,7 +131,7 @@ export const deleteTask = async (taskId: string): Promise<void> => {
 };
 
 /**
- * Marcar tarefa como concluÃ­da
+ * Marcar tarefa como concluÃƒÂ­da
  */
 export const completeTask = async (taskId: string): Promise<Task> => {
   const response = await fetch(buildUrl(`/api/tasks/${taskId}/complete`), {

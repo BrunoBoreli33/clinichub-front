@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 import TaskModal from "./TaskModal";
+import TaskManagerModal from "./Taskmanagermodal";
 import * as tagApi from "@/api/tags";
 import { logError } from "@/lib/logger";
 import { buildUrl } from "@/lib/api";
@@ -162,11 +163,12 @@ interface ChatColumnProps {
   onMoveChat: (chatId: string, fromColumn: string, toColumn: string) => void;
   onOpenTagManager: (chat: Chat) => void;
   onCreateTask: (chat: Chat) => void;
+  onOpenTaskManager: (chat: Chat) => void;
   onRefresh: () => void;
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
 }
 
-const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onRefresh, showToast }: ChatColumnProps) => {
+const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, showToast }: ChatColumnProps) => {
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
     const saved = localStorage.getItem(`column-${id}-sortOrder`);
     return (saved as "recent" | "oldest") || "recent";
@@ -237,6 +239,15 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
       return;
     }
     
+    if (toColumnId === "tarefa") {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "A coluna 'Tarefa' é gerenciada exclusivamente pelo backend. Não é permitido mover conversas manualmente.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     onMoveChat(chatId, id, toColumnId);
   };
 
@@ -287,6 +298,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   };
 
   const isRepescagemColumn = title === "Repescagem";
+  const isTarefaColumn = title === "Tarefa";
 
   return (
     <Card className="w-80 h-full bg-gradient-card border-0 shadow-card flex flex-col flex-shrink-0">
@@ -380,7 +392,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
             ref={provided.innerRef}
             className={`flex-1 overflow-y-auto space-y-2 p-4 pt-0 transition-all duration-200 ${
               snapshot.isDraggingOver
-                ? isRepescagemColumn
+                ? (isRepescagemColumn || isTarefaColumn)
                   ? 'bg-red-50/50 ring-2 ring-red-500 ring-inset rounded-lg'
                   : 'bg-green-50/50 ring-2 ring-green-400 ring-inset rounded-lg'
                 : ''
@@ -500,16 +512,23 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                               Gerenciar Etiquetas
                             </DropdownMenuItem>
                             
-                            {/* ✅ NOVA OPÇÃO: Criar Tarefa */}
+                            
+                            {/* Criar/Editar Tarefa - Muda conforme o chat está na coluna tarefa */}
                             <DropdownMenuItem 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onCreateTask(chat);
+                                if (chat.column === "task") {
+                                  // Se chat já está na coluna tarefa, abrir gerenciador
+                                  onOpenTaskManager(chat);
+                                } else {
+                                  // Senão, abrir modal de criação
+                                  onCreateTask(chat);
+                                }
                               }}
                               className="text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                             >
                               <Calendar className="mr-2 h-3 w-3" />
-                              Criar Tarefa
+                              {chat.column === "task" ? "Editar Tarefa" : "Criar Tarefa"}
                             </DropdownMenuItem>
                             
                             {/* ✅ NOVA OPÇÃO: Resetar Rotinas */}
@@ -567,6 +586,8 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatForTagManager, setChatForTagManager] = useState<Chat | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showTaskManagerModal, setShowTaskManagerModal] = useState(false);
+  const [chatForTaskManager, setChatForTaskManager] = useState<Chat | null>(null);
   const [chatForTask, setChatForTask] = useState<Chat | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   
@@ -602,6 +623,18 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
   const handleCreateTask = (chat: Chat) => {
     setChatForTask(chat);
     setShowTaskModal(true);
+  };
+
+  const handleManageTasks = (chat: Chat) => {
+    setChatForTaskManager(chat);
+    setShowTaskManagerModal(true);
+  };
+
+  const handleTasksUpdated = () => {
+    // Recarregar dados dos chats após atualizar tarefas
+    if (onChatClosed) {
+      onChatClosed();
+    }
   };
 
   const handleTaskCreated = () => {
@@ -659,6 +692,15 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
       showToast?.({
         message: "Movimentação bloqueada",
         description: "A coluna 'Repescagem' é exclusiva para rotinas automáticas. Não é permitido mover conversas manualmente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (toColumn === "tarefa") {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "A coluna 'Tarefa' é gerenciada exclusivamente pelo backend. Não é permitido mover conversas manualmente.",
         variant: "destructive",
       });
       return;
@@ -737,6 +779,24 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
       showToast?.({
         message: "Movimentação bloqueada",
         description: "Chats na coluna 'Repescagem' só podem ser movidos automaticamente pelo sistema de rotinas.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (fromColumn === "tarefa") {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "Chats na coluna 'Tarefa' só podem ser movidos pelo backend. Não é permitido arrastar manualmente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (toColumn === "tarefa") {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "A coluna 'Tarefa' é gerenciada exclusivamente pelo backend. Não é permitido arrastar conversas para esta coluna.",
         variant: "destructive",
       });
       return;
@@ -839,6 +899,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
                 onMoveChat={moveChat}
                 onOpenTagManager={setChatForTagManager}
                 onCreateTask={handleCreateTask}
+                onOpenTaskManager={handleManageTasks}
                 onRefresh={loadTags}
                 showToast={showToast}
               />
@@ -880,6 +941,15 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
         onClose={() => setShowTaskModal(false)}
         chat={chatForTask}
         onTaskCreated={handleTaskCreated}
+        showToast={showToast}
+      />
+
+      {/* Modal de Gerenciamento de Tarefas */}
+      <TaskManagerModal
+        isOpen={showTaskManagerModal}
+        onClose={() => setShowTaskManagerModal(false)}
+        chat={chatForTaskManager}
+        onTasksUpdated={handleTasksUpdated}
         showToast={showToast}
       />
     </>
