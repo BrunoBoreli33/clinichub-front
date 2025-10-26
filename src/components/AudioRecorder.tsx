@@ -13,6 +13,8 @@ const AudioRecorder = ({ onAudioRecorded, disabled }: AudioRecorderProps) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // ✅ NOVO: Ref para armazenar a duração final da gravação
+  const finalDurationRef = useRef<number>(0);
 
   const startRecording = async () => {
     try {
@@ -34,11 +36,19 @@ const AudioRecorder = ({ onAudioRecorded, disabled }: AudioRecorderProps) => {
         
         reader.onloadend = () => {
           const base64Audio = reader.result as string;
-          onAudioRecorded(base64Audio, recordingTime);
+          
+          // ✅ MODIFICADO: Usar finalDurationRef ao invés de recordingTime
+          // para garantir que estamos usando a duração correta capturada no momento do stop
+          const duration = finalDurationRef.current;
+          
+          console.log(`🎤 Áudio gravado - Duração: ${duration} segundos`);
+          
+          onAudioRecorded(base64Audio, duration);
           
           // Limpar
           stream.getTracks().forEach(track => track.stop());
           setRecordingTime(0);
+          finalDurationRef.current = 0;
         };
         
         reader.readAsDataURL(audioBlob);
@@ -60,6 +70,12 @@ const AudioRecorder = ({ onAudioRecorded, disabled }: AudioRecorderProps) => {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      // ✅ CRÍTICO: Capturar a duração ANTES de parar o timer
+      // para garantir que temos o valor correto
+      finalDurationRef.current = recordingTime;
+      
+      console.log(`⏹️ Parando gravação - Duração capturada: ${recordingTime} segundos`);
+      
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       

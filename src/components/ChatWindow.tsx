@@ -373,17 +373,14 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       const data = await response.json();
 
       if (data.success) {
-        // Adicionar áudio à lista local
-        const newAudio: Audio = {
-          id: data.data.id,
-          messageId: data.data.messageId,
-          timestamp: data.data.timestamp,
-          fromMe: true,
-          seconds: data.data.seconds,
-          audioUrl: data.data.audioUrl,
-          status: data.data.status || "SENT",
-        };
-        setAudios(prev => [...prev, newAudio]);
+        // ✅ MUDANÇA PRINCIPAL: NÃO adicionar o áudio localmente
+        // O áudio será adicionado automaticamente quando o webhook processar
+        // e enviar a notificação SSE que dispara o loadMessages()
+        
+        console.log("✅ Áudio enviado com sucesso, aguardando processamento via webhook");
+        
+        // O SSE irá disparar o evento 'sse-chat-update' que recarrega as mensagens
+        // e o áudio aparecerá quando estiver completamente processado
       } else {
         alert("Erro ao enviar áudio: " + data.message);
       }
