@@ -8,6 +8,8 @@ import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause } from "lucide
 import { buildUrl } from "@/lib/api";
 import EmojiPicker from "./EmojiPicker";
 import PreConfiguredTextsPicker from "./PreConfiguredTextsPicker";
+import AudioRecorder from "./AudioRecorder";
+import AudioPlayer from "./AudioPlayer";
 
 interface Tag {
   id: string;
@@ -28,6 +30,18 @@ interface Message {
   senderName?: string;
   senderPhoto?: string;
   isEdited?: boolean;
+}
+
+interface Audio {
+  id: string;
+  messageId: string;
+  timestamp: string;
+  fromMe: boolean;
+  seconds: number;
+  audioUrl: string;
+  status: string;
+  senderName?: string;
+  senderPhoto?: string;
 }
 
 interface Chat {
@@ -51,6 +65,7 @@ interface ChatWindowProps {
 const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [audios, setAudios] = useState<Audio[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -135,12 +150,14 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       const text = await response.text();
       if (!text) {
         setMessages([]);
+        setAudios([]);
         return;
       }
 
       const data = JSON.parse(text);
       if (data.success) {
         setMessages(data.messages || []);
+        setAudios(data.audios || []);
       }
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
@@ -245,6 +262,19 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     };
   }, []);
 
+  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' })> => {
+    const combined = [
+      ...messages,
+      ...audios.map(audio => ({ ...audio, type: 'audio' as const }))
+    ];
+
+    return combined.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeA - timeB;
+    });
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;
 
@@ -318,6 +348,47 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 50);
+    }
+  };
+
+  const handleAudioRecorded = async (audioBase64: string, duration: number) => {
+    const token = localStorage.getItem("token");
+    setSending(true);
+
+    try {
+      const response = await fetch(buildUrl("/dashboard/messages/send-audio"), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chatId: chat.id,
+          phone: chat.phone,
+          audio: audioBase64,
+          duration: duration,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // ✅ MUDANÇA PRINCIPAL: NÃO adicionar o áudio localmente
+        // O áudio será adicionado automaticamente quando o webhook processar
+        // e enviar a notificação SSE que dispara o loadMessages()
+        
+        console.log("✅ Áudio enviado com sucesso, aguardando processamento via webhook");
+        
+        // O SSE irá disparar o evento 'sse-chat-update' que recarrega as mensagens
+        // e o áudio aparecerá quando estiver completamente processado
+      } else {
+        alert("Erro ao enviar áudio: " + data.message);
+      }
+    } catch (error) {
+      console.error("Erro ao enviar áudio:", error);
+      alert("Erro ao enviar áudio: " + (error as Error).message);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -470,121 +541,166 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin text-green-500" />
               </div>
-            ) : messages.length === 0 ? (
+            ) : getCombinedMessages().length === 0 ? (
               <div className="flex items-center justify-center h-full text-gray-400">
                 Nenhuma mensagem ainda
               </div>
             ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.fromMe ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`group max-w-[70%] rounded-2xl px-4 py-2 ${
-                      message.fromMe
-                        ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
-                        : "bg-white text-gray-900 shadow-sm border border-gray-100"
-                    }`}
-                  >
-                    {message.type === "audio" ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-3">
-                          <Button
-                            size="sm"
-                            onClick={() => playAudio(message.audioUrl!, message.messageId)}
-                            className={`h-8 w-8 p-0 rounded-full ${
-                              message.fromMe 
-                                ? "bg-white/20 hover:bg-white/30 text-white" 
-                                : "bg-green-500 hover:bg-green-600 text-white"
+              getCombinedMessages().map((item) => {
+                const isAudio = 'type' in item && item.type === 'audio';
+                const audio = isAudio ? item as Audio & { type: 'audio' } : null;
+                const message = !isAudio ? item as Message : null;
+
+                if (isAudio && audio) {
+                  // Renderizar áudio
+                  return (
+                    <div
+                      key={audio.messageId}
+                      className={`flex ${audio.fromMe ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`group max-w-[70%] rounded-2xl px-4 py-2 ${
+                          audio.fromMe
+                            ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+                            : "bg-white text-gray-900 shadow-sm border border-gray-100"
+                        }`}
+                      >
+                        <AudioPlayer
+                          audioUrl={audio.audioUrl}
+                          duration={audio.seconds}
+                          fromMe={audio.fromMe}
+                          messageId={audio.messageId}
+                        />
+                        <div className="flex items-center justify-between mt-1">
+                          <span
+                            className={`text-[10px] ${
+                              audio.fromMe ? "text-white/70" : "text-gray-500"
                             }`}
                           >
-                            {playingAudio === message.messageId ? (
-                              <Pause className="h-4 w-4" />
-                            ) : (
-                              <Play className="h-4 w-4 ml-0.5" />
-                            )}
-                          </Button>
-                          <div className="flex-1 relative">
-                            <div className={`h-1 rounded-full ${
-                              message.fromMe ? "bg-white/30" : "bg-gray-200"
-                            }`}>
-                              <div 
-                                className={`h-full rounded-full ${
-                                  message.fromMe ? "bg-white/60" : "bg-green-500"
+                            {formatTime(audio.timestamp)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (message) {
+                  // Renderizar mensagem de texto
+                  return (
+                    <div
+                      key={message.messageId}
+                      className={`flex ${message.fromMe ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`group max-w-[70%] rounded-2xl px-4 py-2 ${
+                          message.fromMe
+                            ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+                            : "bg-white text-gray-900 shadow-sm border border-gray-100"
+                        }`}
+                      >
+                        {message.type === "audio" ? (
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-3">
+                              <Button
+                                size="sm"
+                                onClick={() => playAudio(message.audioUrl!, message.messageId)}
+                                className={`h-8 w-8 p-0 rounded-full ${
+                                  message.fromMe 
+                                    ? "bg-white/20 hover:bg-white/30 text-white" 
+                                    : "bg-green-500 hover:bg-green-600 text-white"
                                 }`}
-                                style={{
-                                  width: playingAudio === message.messageId ? "100%" : "0%",
-                                  transition: "width 0.3s"
-                                }}
-                              />
-                            </div>
-                            <span
-                              className={`text-xs mt-1 block ${
-                                message.fromMe ? "text-white/70" : "text-gray-500"
-                              }`}
-                            >
-                              {formatDuration(message.audioDuration || 0)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : editingMessageId === message.messageId ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="text-sm bg-white text-gray-900 border-gray-300"
-                          onKeyPress={(e) => e.key === "Enter" && saveEdit(message.messageId)}
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => saveEdit(message.messageId)}
-                          className="h-6 w-6 p-0 bg-green-500 hover:bg-green-600"
-                        >
-                          <Check className="h-3 w-3 text-white" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-sm break-words">{message.content}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <div className="flex items-center gap-1">
-                            <span
-                              className={`text-[10px] ${
-                                message.fromMe ? "text-white/70" : "text-gray-500"
-                              }`}
-                            >
-                              {formatTime(message.timestamp)}
-                              {message.isEdited && " (editada)"}
-                            </span>
-                            {renderMessageStatus(message)}
-                          </div>
-                          {message.fromMe && message.type === "text" && message.status !== "SENDING" && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-white/20"
+                              >
+                                {playingAudio === message.messageId ? (
+                                  <Pause className="h-4 w-4" />
+                                ) : (
+                                  <Play className="h-4 w-4 ml-0.5" />
+                                )}
+                              </Button>
+                              <div className="flex-1 relative">
+                                <div className={`h-1 rounded-full ${
+                                  message.fromMe ? "bg-white/30" : "bg-gray-200"
+                                }`}>
+                                  <div 
+                                    className={`h-full rounded-full ${
+                                      message.fromMe ? "bg-white/60" : "bg-green-500"
+                                    }`}
+                                    style={{
+                                      width: playingAudio === message.messageId ? "100%" : "0%",
+                                      transition: "width 0.3s"
+                                    }}
+                                  />
+                                </div>
+                                <span
+                                  className={`text-xs mt-1 block ${
+                                    message.fromMe ? "text-white/70" : "text-gray-500"
+                                  }`}
                                 >
-                                  <MoreVertical className="h-3 w-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                <DropdownMenuItem onClick={() => startEdit(message)}>
-                                  <Edit className="h-3 w-3 mr-2" />
-                                  Editar mensagem
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))
+                                  {formatDuration(message.audioDuration || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : editingMessageId === message.messageId ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                              className="text-sm bg-white text-gray-900 border-gray-300"
+                              onKeyPress={(e) => e.key === "Enter" && saveEdit(message.messageId)}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => saveEdit(message.messageId)}
+                              className="h-6 w-6 p-0 bg-green-500 hover:bg-green-600"
+                            >
+                              <Check className="h-3 w-3 text-white" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm break-words">{message.content}</p>
+                            <div className="flex items-center justify-between mt-1">
+                              <div className="flex items-center gap-1">
+                                <span
+                                  className={`text-[10px] ${
+                                    message.fromMe ? "text-white/70" : "text-gray-500"
+                                  }`}
+                                >
+                                  {formatTime(message.timestamp)}
+                                  {message.isEdited && " (editada)"}
+                                </span>
+                                {renderMessageStatus(message)}
+                              </div>
+                              {message.fromMe && message.type === "text" && message.status !== "SENDING" && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-white/20"
+                                    >
+                                      <MoreVertical className="h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => startEdit(message)}>
+                                      <Edit className="h-3 w-3 mr-2" />
+                                      Editar mensagem
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              })
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -605,6 +721,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                 }}
                 placeholder="Digite sua mensagem..."
                 className="flex-1 rounded-full border-gray-200 focus:ring-2 focus:ring-green-500"
+                disabled={sending}
+              />
+              <AudioRecorder 
+                onAudioRecorded={handleAudioRecorded}
                 disabled={sending}
               />
               <Button
