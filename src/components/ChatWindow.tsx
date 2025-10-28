@@ -10,6 +10,7 @@ import EmojiPicker from "./EmojiPicker";
 import PreConfiguredTextsPicker from "./PreConfiguredTextsPicker";
 import AudioRecorder from "./AudioRecorder";
 import AudioPlayer from "./AudioPlayer";
+import PhotoViewer from "./PhotoViewer";
 
 interface Tag {
   id: string;
@@ -44,6 +45,20 @@ interface Audio {
   senderPhoto?: string;
 }
 
+interface Photo {
+  id: string;
+  messageId: string;
+  imageUrl: string;
+  width: number;
+  height: number;
+  timestamp: string;
+  fromMe: boolean;
+  status: string;
+  senderName?: string;
+  savedInGallery: boolean;
+  caption?: string;
+}
+
 interface Chat {
   id: string;
   name: string;
@@ -66,12 +81,14 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [audios, setAudios] = useState<Audio[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [shouldAutoFocus, setShouldAutoFocus] = useState(true);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -151,6 +168,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       if (!text) {
         setMessages([]);
         setAudios([]);
+        setPhotos([]);
         return;
       }
 
@@ -158,6 +176,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       if (data.success) {
         setMessages(data.messages || []);
         setAudios(data.audios || []);
+        setPhotos(data.photos || []);
       }
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
@@ -252,20 +271,21 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     };
 
     if (messagesContainer) {
-      messagesContainer.addEventListener('mousedown', handleClickOutsideInput);
+      messagesContainer.addEventListener('click', handleClickOutsideInput);
     }
 
     return () => {
       if (messagesContainer) {
-        messagesContainer.removeEventListener('mousedown', handleClickOutsideInput);
+        messagesContainer.removeEventListener('click', handleClickOutsideInput);
       }
     };
   }, []);
 
-  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' })> => {
+  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' }) | (Photo & { type: 'photo' })> => {
     const combined = [
       ...messages,
-      ...audios.map(audio => ({ ...audio, type: 'audio' as const }))
+      ...audios.map(audio => ({ ...audio, type: 'audio' as const })),
+      ...photos.map(photo => ({ ...photo, type: 'photo' as const }))
     ];
 
     return combined.sort((a, b) => {
@@ -278,88 +298,52 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;
 
-    const messageContent = newMessage;
-    const tempId = `temp_${Date.now()}`;
-    setNewMessage("");
-
-    setShouldAutoFocus(true);
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
-
-    const optimisticMessage: Message = {
-      id: tempId,
-      messageId: tempId,
-      content: messageContent,
-      type: "text",
-      timestamp: new Date().toISOString(),
-      fromMe: true,
-      status: "SENDING",
-      isEdited: false,
-    };
-
-    setMessages(prev => [...prev, optimisticMessage]);
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-
     setSending(true);
     const token = localStorage.getItem("token");
+    const messageText = newMessage;
+    setNewMessage("");
 
     try {
-      const body = {
-        chatId: chat.id,
-        phone: chat.phone,
-        message: messageContent,
-      };
-
       const response = await fetch(buildUrl('/dashboard/messages/send'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          chatId: chat.id,
+          phone: chat.phone,
+          message: messageText,
+        }),
       });
 
-      const text = await response.text();
-      if (!response.ok) {
-        setMessages(prev => prev.filter(msg => msg.id !== tempId));
-        setNewMessage(messageContent);
-        throw new Error(`Erro ${response.status}: ${text}`);
-      }
-
-      const data = JSON.parse(text);
-      if (data.success && data.data) {
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempId ? { 
-            ...msg, 
-            id: data.data.id, 
-            messageId: data.data.messageId, 
-            status: data.data.status || "SENT"
-          } : msg
-        ));
+      const data = await response.json();
+      if (data.success) {
+        console.log("✅ Mensagem enviada com sucesso");
+        loadMessages(true);
+      } else {
+        console.error("❌ Erro ao enviar mensagem:", data.message);
+        setNewMessage(messageText);
       }
     } catch (error) {
-      console.error("Erro ao enviar mensagem:", error);
-      alert("Erro ao enviar mensagem: " + (error as Error).message);
+      console.error("❌ Erro ao enviar mensagem:", error);
+      setNewMessage(messageText);
     } finally {
       setSending(false);
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
     }
   };
 
   const handleAudioRecorded = async (audioBase64: string, duration: number) => {
-    const token = localStorage.getItem("token");
+    console.log("🎤 Áudio recebido - Duration:", duration, "seconds");
+    
     setSending(true);
+    const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch(buildUrl("/dashboard/messages/send-audio"), {
+      const response = await fetch(buildUrl('/dashboard/messages/send-audio'), {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -367,26 +351,19 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           phone: chat.phone,
           audio: audioBase64,
           duration: duration,
+          waveform: true
         }),
       });
 
       const data = await response.json();
-
       if (data.success) {
-        // ✅ MUDANÇA PRINCIPAL: NÃO adicionar o áudio localmente
-        // O áudio será adicionado automaticamente quando o webhook processar
-        // e enviar a notificação SSE que dispara o loadMessages()
-        
-        console.log("✅ Áudio enviado com sucesso, aguardando processamento via webhook");
-        
-        // O SSE irá disparar o evento 'sse-chat-update' que recarrega as mensagens
-        // e o áudio aparecerá quando estiver completamente processado
+        console.log("✅ Áudio enviado com sucesso");
+        loadMessages(true);
       } else {
-        alert("Erro ao enviar áudio: " + data.message);
+        console.error("❌ Erro ao enviar áudio:", data.message);
       }
     } catch (error) {
-      console.error("Erro ao enviar áudio:", error);
-      alert("Erro ao enviar áudio: " + (error as Error).message);
+      console.error("❌ Erro ao enviar áudio:", error);
     } finally {
       setSending(false);
     }
@@ -394,8 +371,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
 
   const playAudio = (audioUrl: string, messageId: string) => {
     if (playingAudio === messageId) {
-      audioRef.current?.pause();
-      setPlayingAudio(null);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        setPlayingAudio(null);
+      }
     } else {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -457,6 +436,45 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       }
     } catch (error) {
       console.error("Erro ao editar mensagem:", error);
+    }
+  };
+
+  const togglePhotoInGallery = async (photoId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        buildUrl(`/dashboard/messages/photos/${photoId}/toggle-gallery`),
+        {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        // Atualizar estado local
+        setPhotos(prev => 
+          prev.map(p => 
+            p.id === photoId 
+              ? { ...p, savedInGallery: data.photo.savedInGallery }
+              : p
+          )
+        );
+        
+        // Atualizar selectedPhoto se for a mesma foto
+        if (selectedPhoto?.id === photoId) {
+          setSelectedPhoto(prev => 
+            prev ? { ...prev, savedInGallery: data.photo.savedInGallery } : null
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar/remover foto da galeria:", error);
     }
   };
 
@@ -548,8 +566,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
             ) : (
               getCombinedMessages().map((item) => {
                 const isAudio = 'type' in item && item.type === 'audio';
+                const isPhoto = 'type' in item && item.type === 'photo';
                 const audio = isAudio ? item as Audio & { type: 'audio' } : null;
-                const message = !isAudio ? item as Message : null;
+                const photo = isPhoto ? item as Photo & { type: 'photo' } : null;
+                const message = !isAudio && !isPhoto ? item as Message : null;
 
                 if (isAudio && audio) {
                   // Renderizar áudio
@@ -579,6 +599,93 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                           >
                             {formatTime(audio.timestamp)}
                           </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isPhoto && photo) {
+                  // Renderizar foto
+                  return (
+                    <div
+                      key={photo.messageId}
+                      className={`flex ${photo.fromMe ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`group max-w-[70%] rounded-2xl overflow-hidden ${
+                          photo.fromMe
+                            ? "bg-gradient-to-br from-green-500 to-emerald-600"
+                            : "bg-white shadow-sm border border-gray-100"
+                        }`}
+                      >
+                        {/* Foto em miniatura */}
+                        <div 
+                          className="relative cursor-pointer"
+                          onClick={() => setSelectedPhoto(photo)}
+                        >
+                          <img
+                            src={photo.imageUrl}
+                            alt="Foto"
+                            className="max-w-[300px] max-h-[400px] object-contain"
+                            loading="lazy"
+                          />
+                          {/* Overlay ao hover */}
+                          <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <svg 
+                                className="w-12 h-12 text-white drop-shadow-lg" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  strokeWidth={2} 
+                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" 
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Caption da foto */}
+                        {photo.caption && photo.caption.trim() !== "" && (
+                          <div className={`px-3 py-2 ${photo.fromMe ? "text-white" : "text-gray-900"}`}>
+                            <p className="text-sm break-words">{photo.caption}</p>
+                          </div>
+                        )}
+
+                        {/* Footer com timestamp e opções */}
+                        <div className={`px-3 py-2 ${photo.fromMe ? "text-white" : "text-gray-900"}`}>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] ${photo.fromMe ? "text-white/70" : "text-gray-500"}`}>
+                              {formatTime(photo.timestamp)}
+                            </span>
+                            
+                            {/* Dropdown com opções */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-6 w-6 p-0 ${
+                                    photo.fromMe 
+                                      ? "hover:bg-white/20 text-white" 
+                                      : "hover:bg-gray-100 text-gray-600"
+                                  }`}
+                                >
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => togglePhotoInGallery(photo.id)}>
+                                  {photo.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -742,6 +849,14 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           </div>
         </div>
       </CardContent>
+
+      {selectedPhoto && (
+        <PhotoViewer
+          photo={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+          onToggleGallery={togglePhotoInGallery}
+        />
+      )}
     </Card>
   );
 };
