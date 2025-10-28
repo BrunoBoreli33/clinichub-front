@@ -135,7 +135,7 @@ const Sidebar: React.FC<{
           >
             <Image className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
             <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
-              Galeria de Fotos
+              Galeria
             </span>
           </button>
 

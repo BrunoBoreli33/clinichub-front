@@ -11,6 +11,7 @@ import PreConfiguredTextsPicker from "./PreConfiguredTextsPicker";
 import AudioRecorder from "./AudioRecorder";
 import AudioPlayer from "./AudioPlayer";
 import PhotoViewer from "./PhotoViewer";
+import VideoViewer from "./VideoViewer";
 
 interface Tag {
   id: string;
@@ -59,6 +60,23 @@ interface Photo {
   caption?: string;
 }
 
+interface Video {
+  id: string;
+  messageId: string;
+  videoUrl: string;
+  width: number;
+  height: number;
+  seconds: number;
+  timestamp: string;
+  fromMe: boolean;
+  status: string;
+  senderName?: string;
+  savedInGallery: boolean;
+  mimeType?: string;
+  isGif?: boolean;
+  caption?: string;
+}
+
 interface Chat {
   id: string;
   name: string;
@@ -82,6 +100,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [audios, setAudios] = useState<Audio[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -89,6 +108,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [shouldAutoFocus, setShouldAutoFocus] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -169,6 +189,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         setMessages([]);
         setAudios([]);
         setPhotos([]);
+        setVideos([]);
         return;
       }
 
@@ -177,6 +198,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         setMessages(data.messages || []);
         setAudios(data.audios || []);
         setPhotos(data.photos || []);
+        setVideos(data.videos || []);
       }
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
@@ -281,11 +303,12 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     };
   }, []);
 
-  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' }) | (Photo & { type: 'photo' })> => {
+  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' }) | (Photo & { type: 'photo' }) | (Video & { type: 'video' })> => {
     const combined = [
       ...messages,
       ...audios.map(audio => ({ ...audio, type: 'audio' as const })),
-      ...photos.map(photo => ({ ...photo, type: 'photo' as const }))
+      ...photos.map(photo => ({ ...photo, type: 'photo' as const })),
+      ...videos.map(video => ({ ...video, type: 'video' as const }))
     ];
 
     return combined.sort((a, b) => {
@@ -478,6 +501,45 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     }
   };
 
+  const toggleVideoInGallery = async (videoId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        buildUrl(`/dashboard/messages/videos/${videoId}/toggle-gallery`),
+        {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        // Atualizar estado local
+        setVideos(prev => 
+          prev.map(v => 
+            v.id === videoId 
+              ? { ...v, savedInGallery: data.video.savedInGallery }
+              : v
+          )
+        );
+        
+        // Atualizar selectedVideo se for o mesmo vídeo
+        if (selectedVideo?.id === videoId) {
+          setSelectedVideo(prev => 
+            prev ? { ...prev, savedInGallery: data.video.savedInGallery } : null
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar/remover vídeo da galeria:", error);
+    }
+  };
+
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -567,9 +629,11 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
               getCombinedMessages().map((item) => {
                 const isAudio = 'type' in item && item.type === 'audio';
                 const isPhoto = 'type' in item && item.type === 'photo';
+                const isVideo = 'type' in item && item.type === 'video';
                 const audio = isAudio ? item as Audio & { type: 'audio' } : null;
                 const photo = isPhoto ? item as Photo & { type: 'photo' } : null;
-                const message = !isAudio && !isPhoto ? item as Message : null;
+                const video = isVideo ? item as Video & { type: 'video' } : null;
+                const message = !isAudio && !isPhoto && !isVideo ? item as Message : null;
 
                 if (isAudio && audio) {
                   // Renderizar áudio
@@ -682,6 +746,85 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => togglePhotoInGallery(photo.id)}>
                                   {photo.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isVideo && video) {
+                  // Renderizar vídeo
+                  return (
+                    <div
+                      key={video.messageId}
+                      className={`flex ${video.fromMe ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`group max-w-[70%] rounded-2xl overflow-hidden ${
+                          video.fromMe
+                            ? "bg-gradient-to-br from-green-500 to-emerald-600"
+                            : "bg-white shadow-sm border border-gray-100"
+                        }`}
+                      >
+                        {/* Vídeo em miniatura */}
+                        <div 
+                          className="relative cursor-pointer"
+                          onClick={() => setSelectedVideo(video)}
+                        >
+                          <video
+                            src={video.videoUrl}
+                            className="max-w-[300px] max-h-[400px] object-contain"
+                          />
+                          {/* Overlay com ícone de play */}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
+                            <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
+                              <svg className="w-8 h-8 text-gray-800 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                              </svg>
+                            </div>
+                          </div>
+                          {/* Duração do vídeo */}
+                          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                            {formatDuration(video.seconds)}
+                          </div>
+                        </div>
+
+                        {/* Caption do vídeo */}
+                        {video.caption && video.caption.trim() !== "" && (
+                          <div className={`px-3 py-2 ${video.fromMe ? "text-white" : "text-gray-900"}`}>
+                            <p className="text-sm break-words">{video.caption}</p>
+                          </div>
+                        )}
+
+                        {/* Footer com timestamp e opções */}
+                        <div className={`px-3 py-2 ${video.fromMe ? "text-white" : "text-gray-900"}`}>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] ${video.fromMe ? "text-white/70" : "text-gray-500"}`}>
+                              {formatTime(video.timestamp)}
+                            </span>
+                            
+                            {/* Dropdown com opções */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-6 w-6 p-0 ${
+                                    video.fromMe 
+                                      ? "hover:bg-white/20 text-white" 
+                                      : "hover:bg-gray-100 text-gray-600"
+                                  }`}
+                                >
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => toggleVideoInGallery(video.id)}>
+                                  {video.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -855,6 +998,14 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           photo={selectedPhoto}
           onClose={() => setSelectedPhoto(null)}
           onToggleGallery={togglePhotoInGallery}
+        />
+      )}
+
+      {selectedVideo && (
+        <VideoViewer
+          video={selectedVideo}
+          onClose={() => setSelectedVideo(null)}
+          onToggleGallery={toggleVideoInGallery}
         />
       )}
     </Card>
