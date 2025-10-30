@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause } from "lucide-react";
+import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic } from "lucide-react";
 import { buildUrl } from "@/lib/api";
 import EmojiPicker from "./EmojiPicker";
 import PreConfiguredTextsPicker from "./PreConfiguredTextsPicker";
@@ -12,6 +12,8 @@ import AudioRecorder from "./AudioRecorder";
 import AudioPlayer from "./AudioPlayer";
 import PhotoViewer from "./PhotoViewer";
 import VideoViewer from "./VideoViewer";
+import MediaTypeSelectorModal from "./MediaTypeSelectorModal";
+import GalleryModal from "./GalleryModal";
 
 interface Tag {
   id: string;
@@ -77,6 +79,13 @@ interface Video {
   caption?: string;
 }
 
+// Tipo para itens vindos da galeria (compatÃ­vel com GalleryModal)
+type GalleryMediaItem = {
+  id: string;
+  imageUrl?: string;
+  videoUrl?: string;
+};
+
 interface Chat {
   id: string;
   name: string;
@@ -109,6 +118,11 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [shouldAutoFocus, setShouldAutoFocus] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  
+  // Estados para galeria e seletor de mÃ­dia
+  const [showMediaTypeSelector, setShowMediaTypeSelector] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [galleryFilterType, setGalleryFilterType] = useState<'photos' | 'videos'>('photos');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -206,6 +220,68 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       if (!silent) setLoading(false);
     }
   }, [chat.id]);
+
+  // FunÃ§Ãµes de controle da galeria
+  const handleGalleryButtonClick = () => {
+    setShowMediaTypeSelector(true);
+  };
+
+  const handleMediaTypeSelect = (type: 'photo' | 'video') => {
+    setShowMediaTypeSelector(false);
+    setGalleryFilterType(type === 'photo' ? 'photos' : 'videos');
+    setShowGalleryModal(true);
+  };
+
+  const handleMediaSelected = async (items: GalleryMediaItem[], type: 'photo' | 'video') => {
+    console.log(`ðŸ“¤ Enviando ${items.length} ${type === 'photo' ? 'fotos' : 'vÃ­deos'}`);
+    setSending(true);
+
+    const token = localStorage.getItem("token");
+
+    try {
+      for (const item of items) {
+        if (type === 'photo' && 'imageUrl' in item) {
+          await fetch(buildUrl('/dashboard/messages/send-image'), {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              chatId: chat.id,
+              phone: chat.phone,
+              image: item.imageUrl,
+              photoId: item.id
+            }),
+          });
+        } else if (type === 'video' && 'videoUrl' in item) {
+          await fetch(buildUrl('/dashboard/messages/send-video'), {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              chatId: chat.id,
+              phone: chat.phone,
+              video: item.videoUrl,
+              videoId: item.id
+            }),
+          });
+        }
+        
+        // Pequeno delay entre envios
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      console.log("âœ… Todas as mÃ­dias foram enviadas");
+      loadMessages(true);
+    } catch (error) {
+      console.error("âŒ Erro ao enviar mÃ­dias:", error);
+    } finally {
+      setSending(false);
+    }
+  };
 
   // Carregar mensagens ao abrir chat
   useEffect(() => {
@@ -959,6 +1035,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
             <div className="flex items-center gap-2">
               <EmojiPicker onEmojiSelect={handleEmojiSelect} />
               <PreConfiguredTextsPicker onSelectText={handlePreConfiguredTextSelect} />
+              
               <Input
                 ref={inputRef}
                 value={newMessage}
@@ -973,21 +1050,39 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                 className="flex-1 rounded-full border-gray-200 focus:ring-2 focus:ring-green-500"
                 disabled={sending}
               />
-              <AudioRecorder 
-                onAudioRecorded={handleAudioRecorded}
-                disabled={sending}
-              />
+
+              {/* Botão Galeria */}
               <Button
-                onClick={sendMessage}
-                className="rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 w-10 p-0"
-                disabled={sending || !newMessage.trim()}
+                onClick={handleGalleryButtonClick}
+                variant="ghost"
+                size="sm"
+                className="h-10 w-10 p-0 rounded-full hover:bg-gray-100"
+                disabled={sending}
               >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
+                <Images className="h-5 w-5 text-gray-600" />
               </Button>
+
+              {/* Botão Conjugado: Enviar OU Gravar Áudio */}
+              {newMessage.trim().length > 0 ? (
+                // Botão de Enviar (quando tem texto)
+                <Button
+                  onClick={sendMessage}
+                  className="rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 w-10 p-0"
+                  disabled={sending || !newMessage.trim()}
+                >
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              ) : (
+                // Botão de Gravar Áudio (quando não tem texto)
+                <AudioRecorder 
+                  onAudioRecorded={handleAudioRecorded}
+                  disabled={sending}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -1006,6 +1101,24 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           video={selectedVideo}
           onClose={() => setSelectedVideo(null)}
           onToggleGallery={toggleVideoInGallery}
+        />
+      )}
+
+      {/* Modal Seletor de Tipo de Mídia */}
+      {showMediaTypeSelector && (
+        <MediaTypeSelectorModal
+          onSelectType={handleMediaTypeSelect}
+          onClose={() => setShowMediaTypeSelector(false)}
+        />
+      )}
+
+      {/* Modal Galeria em Modo Seleção */}
+      {showGalleryModal && (
+        <GalleryModal
+          onClose={() => setShowGalleryModal(false)}
+          selectionMode={true}
+          filterType={galleryFilterType}
+          onMediaSelected={handleMediaSelected}
         />
       )}
     </Card>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, CheckCircle2, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { buildUrl } from "@/lib/api";
@@ -31,17 +31,31 @@ interface Video {
   savedInGallery: boolean;
 }
 
+type PhotoWithType = Photo & { type: 'photo' };
+type VideoWithType = Video & { type: 'video' };
+type MediaItem = PhotoWithType | VideoWithType;
+
 interface GalleryModalProps {
   onClose: () => void;
+  selectionMode?: boolean;
+  filterType?: 'photos' | 'videos';
+  onMediaSelected?: (items: Array<{id: string; imageUrl?: string; videoUrl?: string}>, type: 'photo' | 'video') => void;
 }
 
-const GalleryModal = ({ onClose }: GalleryModalProps) => {
+const GalleryModal = ({ onClose, selectionMode = false, filterType, onMediaSelected }: GalleryModalProps) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [filter, setFilter] = useState<'all' | 'photos' | 'videos'>('all');
+  const [filter, setFilter] = useState<'all' | 'photos' | 'videos'>(filterType || 'all');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (filterType) {
+      setFilter(filterType);
+    }
+  }, [filterType]);
 
   useEffect(() => {
     loadGalleryItems();
@@ -121,6 +135,52 @@ const GalleryModal = ({ onClose }: GalleryModalProps) => {
     }
   };
 
+  const toggleItemSelection = (itemId: string) => {
+    const newSelection = new Set(selectedItems);
+    if (newSelection.has(itemId)) {
+      newSelection.delete(itemId);
+    } else {
+      newSelection.add(itemId);
+    }
+    setSelectedItems(newSelection);
+  };
+
+  const handleSendSelected = () => {
+    if (selectedItems.size === 0) return;
+
+    const selectedMediaItems: Array<{id: string; imageUrl?: string; videoUrl?: string}> = [];
+    let mediaType: 'photo' | 'video' = 'photo';
+
+    if (filter === 'photos') {
+      mediaType = 'photo';
+      selectedItems.forEach(id => {
+        const photo = photos.find(p => p.id === id);
+        if (photo) {
+          selectedMediaItems.push({
+            id: photo.id,
+            imageUrl: photo.imageUrl
+          });
+        }
+      });
+    } else if (filter === 'videos') {
+      mediaType = 'video';
+      selectedItems.forEach(id => {
+        const video = videos.find(v => v.id === id);
+        if (video) {
+          selectedMediaItems.push({
+            id: video.id,
+            videoUrl: video.videoUrl
+          });
+        }
+      });
+    }
+
+    if (onMediaSelected && selectedMediaItems.length > 0) {
+      onMediaSelected(selectedMediaItems, mediaType);
+    }
+    onClose();
+  };
+
   const getFilteredItems = () => {
     const items = [];
     
@@ -152,6 +212,18 @@ const GalleryModal = ({ onClose }: GalleryModalProps) => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const handleItemClick = (item: MediaItem) => {
+    if (selectionMode) {
+      toggleItemSelection(item.id);
+    } else {
+      if (item.type === 'photo') {
+        setSelectedPhoto(item);
+      } else {
+        setSelectedVideo(item);
+      }
+    }
+  };
+
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
@@ -159,35 +231,59 @@ const GalleryModal = ({ onClose }: GalleryModalProps) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">
-            {filter === 'all' && 'Galeria'}
-            {filter === 'photos' && '📷 Fotos'}
-            {filter === 'videos' && '🎥 Vídeos'}
+            {selectionMode ? (
+              <>
+                {filter === 'photos' && '📷 Selecionar Fotos'}
+                {filter === 'videos' && '🎥 Selecionar Vídeos'}
+                {filter === 'all' && 'Selecionar Mídias'}
+              </>
+            ) : (
+              <>
+                {filter === 'all' && 'Galeria'}
+                {filter === 'photos' && '📷 Fotos'}
+                {filter === 'videos' && '🎥 Vídeos'}
+              </>
+            )}
           </h2>
           
-          {/* Filtros */}
-          <div className="flex gap-2">
+          {/* Filtros - apenas se não estiver em modo seleção com filterType definido */}
+          {!selectionMode && (
+            <div className="flex gap-2">
+              <Button
+                variant={filter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('all')}
+              >
+                Todos ({photos.length + videos.length})
+              </Button>
+              <Button
+                variant={filter === 'photos' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('photos')}
+              >
+                Fotos ({photos.length})
+              </Button>
+              <Button
+                variant={filter === 'videos' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('videos')}
+              >
+                Vídeos ({videos.length})
+              </Button>
+            </div>
+          )}
+
+          {/* Botão Enviar - apenas em modo seleção */}
+          {selectionMode && (
             <Button
-              variant={filter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('all')}
+              onClick={handleSendSelected}
+              disabled={selectedItems.size === 0}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
             >
-              Todos ({photos.length + videos.length})
+              <Send className="h-4 w-4 mr-2" />
+              Enviar ({selectedItems.size})
             </Button>
-            <Button
-              variant={filter === 'photos' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('photos')}
-            >
-              Fotos ({photos.length})
-            </Button>
-            <Button
-              variant={filter === 'videos' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('videos')}
-            >
-              Vídeos ({videos.length})
-            </Button>
-          </div>
+          )}
           
           <Button
             onClick={onClose}
@@ -226,7 +322,10 @@ const GalleryModal = ({ onClose }: GalleryModalProps) => {
                 {filter === 'videos' && 'Nenhum vídeo salvo na galeria'}
               </p>
               <p className="text-sm mt-2">
-                Salve itens clicando nos 3 pontinhos dentro das conversas
+                {selectionMode 
+                  ? 'Salve itens na galeria para poder enviá-los'
+                  : 'Salve itens clicando nos 3 pontinhos dentro das conversas'
+                }
               </p>
             </div>
           ) : (
@@ -234,14 +333,12 @@ const GalleryModal = ({ onClose }: GalleryModalProps) => {
               {getFilteredItems().map((item) => (
                 <div
                   key={item.id}
-                  className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer bg-gray-100 hover:shadow-lg transition-all"
-                  onClick={() => {
-                    if (item.type === 'photo') {
-                      setSelectedPhoto(item);
-                    } else {
-                      setSelectedVideo(item);
-                    }
-                  }}
+                  className={`group relative aspect-square rounded-lg overflow-hidden cursor-pointer bg-gray-100 transition-all ${
+                    selectedItems.has(item.id) 
+                      ? 'ring-4 ring-green-500 shadow-xl' 
+                      : 'hover:shadow-lg'
+                  }`}
+                  onClick={() => handleItemClick(item)}
                 >
                   {item.type === 'photo' ? (
                     <img
@@ -269,6 +366,21 @@ const GalleryModal = ({ onClose }: GalleryModalProps) => {
                       </div>
                     </>
                   )}
+
+                  {/* Indicador de seleção */}
+                  {selectionMode && (
+                    <div className="absolute top-2 left-2">
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                        selectedItems.has(item.id)
+                          ? 'bg-green-500 border-green-500'
+                          : 'bg-white/80 border-white'
+                      }`}>
+                        {selectedItems.has(item.id) && (
+                          <CheckCircle2 className="h-4 w-4 text-white" />
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="absolute bottom-0 left-0 right-0 p-2">
@@ -287,8 +399,8 @@ const GalleryModal = ({ onClose }: GalleryModalProps) => {
         </div>
       </Card>
 
-      {/* Photo Viewer */}
-      {selectedPhoto && (
+      {/* Photo Viewer - apenas se não estiver em modo seleção */}
+      {!selectionMode && selectedPhoto && (
         <PhotoViewer
           photo={selectedPhoto}
           onClose={() => setSelectedPhoto(null)}
@@ -296,8 +408,8 @@ const GalleryModal = ({ onClose }: GalleryModalProps) => {
         />
       )}
 
-      {/* Video Viewer */}
-      {selectedVideo && (
+      {/* Video Viewer - apenas se não estiver em modo seleção */}
+      {!selectionMode && selectedVideo && (
         <VideoViewer
           video={selectedVideo}
           onClose={() => setSelectedVideo(null)}
