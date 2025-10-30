@@ -4,12 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause } from "lucide-react";
+import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic } from "lucide-react";
 import { buildUrl } from "@/lib/api";
 import EmojiPicker from "./EmojiPicker";
 import PreConfiguredTextsPicker from "./PreConfiguredTextsPicker";
 import AudioRecorder from "./AudioRecorder";
 import AudioPlayer from "./AudioPlayer";
+import PhotoViewer from "./PhotoViewer";
+import VideoViewer from "./VideoViewer";
+import MediaTypeSelectorModal from "./MediaTypeSelectorModal";
+import GalleryModal from "./GalleryModal";
 
 interface Tag {
   id: string;
@@ -44,6 +48,44 @@ interface Audio {
   senderPhoto?: string;
 }
 
+interface Photo {
+  id: string;
+  messageId: string;
+  imageUrl: string;
+  width: number;
+  height: number;
+  timestamp: string;
+  fromMe: boolean;
+  status: string;
+  senderName?: string;
+  savedInGallery: boolean;
+  caption?: string;
+}
+
+interface Video {
+  id: string;
+  messageId: string;
+  videoUrl: string;
+  width: number;
+  height: number;
+  seconds: number;
+  timestamp: string;
+  fromMe: boolean;
+  status: string;
+  senderName?: string;
+  savedInGallery: boolean;
+  mimeType?: string;
+  isGif?: boolean;
+  caption?: string;
+}
+
+// Tipo para itens vindos da galeria (compatÃ­vel com GalleryModal)
+type GalleryMediaItem = {
+  id: string;
+  imageUrl?: string;
+  videoUrl?: string;
+};
+
 interface Chat {
   id: string;
   name: string;
@@ -66,12 +108,21 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [audios, setAudios] = useState<Audio[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [shouldAutoFocus, setShouldAutoFocus] = useState(true);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  
+  // Estados para galeria e seletor de mÃ­dia
+  const [showMediaTypeSelector, setShowMediaTypeSelector] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [galleryFilterType, setGalleryFilterType] = useState<'photos' | 'videos'>('photos');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -151,6 +202,8 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       if (!text) {
         setMessages([]);
         setAudios([]);
+        setPhotos([]);
+        setVideos([]);
         return;
       }
 
@@ -158,6 +211,8 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       if (data.success) {
         setMessages(data.messages || []);
         setAudios(data.audios || []);
+        setPhotos(data.photos || []);
+        setVideos(data.videos || []);
       }
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
@@ -165,6 +220,68 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       if (!silent) setLoading(false);
     }
   }, [chat.id]);
+
+  // FunÃ§Ãµes de controle da galeria
+  const handleGalleryButtonClick = () => {
+    setShowMediaTypeSelector(true);
+  };
+
+  const handleMediaTypeSelect = (type: 'photo' | 'video') => {
+    setShowMediaTypeSelector(false);
+    setGalleryFilterType(type === 'photo' ? 'photos' : 'videos');
+    setShowGalleryModal(true);
+  };
+
+  const handleMediaSelected = async (items: GalleryMediaItem[], type: 'photo' | 'video') => {
+    console.log(`ðŸ“¤ Enviando ${items.length} ${type === 'photo' ? 'fotos' : 'vÃ­deos'}`);
+    setSending(true);
+
+    const token = localStorage.getItem("token");
+
+    try {
+      for (const item of items) {
+        if (type === 'photo' && 'imageUrl' in item) {
+          await fetch(buildUrl('/dashboard/messages/send-image'), {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              chatId: chat.id,
+              phone: chat.phone,
+              image: item.imageUrl,
+              photoId: item.id
+            }),
+          });
+        } else if (type === 'video' && 'videoUrl' in item) {
+          await fetch(buildUrl('/dashboard/messages/send-video'), {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              chatId: chat.id,
+              phone: chat.phone,
+              video: item.videoUrl,
+              videoId: item.id
+            }),
+          });
+        }
+        
+        // Pequeno delay entre envios
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      console.log("âœ… Todas as mÃ­dias foram enviadas");
+      loadMessages(true);
+    } catch (error) {
+      console.error("âŒ Erro ao enviar mÃ­dias:", error);
+    } finally {
+      setSending(false);
+    }
+  };
 
   // Carregar mensagens ao abrir chat
   useEffect(() => {
@@ -252,20 +369,22 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     };
 
     if (messagesContainer) {
-      messagesContainer.addEventListener('mousedown', handleClickOutsideInput);
+      messagesContainer.addEventListener('click', handleClickOutsideInput);
     }
 
     return () => {
       if (messagesContainer) {
-        messagesContainer.removeEventListener('mousedown', handleClickOutsideInput);
+        messagesContainer.removeEventListener('click', handleClickOutsideInput);
       }
     };
   }, []);
 
-  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' })> => {
+  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' }) | (Photo & { type: 'photo' }) | (Video & { type: 'video' })> => {
     const combined = [
       ...messages,
-      ...audios.map(audio => ({ ...audio, type: 'audio' as const }))
+      ...audios.map(audio => ({ ...audio, type: 'audio' as const })),
+      ...photos.map(photo => ({ ...photo, type: 'photo' as const })),
+      ...videos.map(video => ({ ...video, type: 'video' as const }))
     ];
 
     return combined.sort((a, b) => {
@@ -278,88 +397,52 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;
 
-    const messageContent = newMessage;
-    const tempId = `temp_${Date.now()}`;
-    setNewMessage("");
-
-    setShouldAutoFocus(true);
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
-
-    const optimisticMessage: Message = {
-      id: tempId,
-      messageId: tempId,
-      content: messageContent,
-      type: "text",
-      timestamp: new Date().toISOString(),
-      fromMe: true,
-      status: "SENDING",
-      isEdited: false,
-    };
-
-    setMessages(prev => [...prev, optimisticMessage]);
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-
     setSending(true);
     const token = localStorage.getItem("token");
+    const messageText = newMessage;
+    setNewMessage("");
 
     try {
-      const body = {
-        chatId: chat.id,
-        phone: chat.phone,
-        message: messageContent,
-      };
-
       const response = await fetch(buildUrl('/dashboard/messages/send'), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          chatId: chat.id,
+          phone: chat.phone,
+          message: messageText,
+        }),
       });
 
-      const text = await response.text();
-      if (!response.ok) {
-        setMessages(prev => prev.filter(msg => msg.id !== tempId));
-        setNewMessage(messageContent);
-        throw new Error(`Erro ${response.status}: ${text}`);
-      }
-
-      const data = JSON.parse(text);
-      if (data.success && data.data) {
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempId ? { 
-            ...msg, 
-            id: data.data.id, 
-            messageId: data.data.messageId, 
-            status: data.data.status || "SENT"
-          } : msg
-        ));
+      const data = await response.json();
+      if (data.success) {
+        console.log("✅ Mensagem enviada com sucesso");
+        loadMessages(true);
+      } else {
+        console.error("❌ Erro ao enviar mensagem:", data.message);
+        setNewMessage(messageText);
       }
     } catch (error) {
-      console.error("Erro ao enviar mensagem:", error);
-      alert("Erro ao enviar mensagem: " + (error as Error).message);
+      console.error("❌ Erro ao enviar mensagem:", error);
+      setNewMessage(messageText);
     } finally {
       setSending(false);
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
     }
   };
 
   const handleAudioRecorded = async (audioBase64: string, duration: number) => {
-    const token = localStorage.getItem("token");
+    console.log("🎤 Áudio recebido - Duration:", duration, "seconds");
+    
     setSending(true);
+    const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch(buildUrl("/dashboard/messages/send-audio"), {
+      const response = await fetch(buildUrl('/dashboard/messages/send-audio'), {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -367,26 +450,19 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           phone: chat.phone,
           audio: audioBase64,
           duration: duration,
+          waveform: true
         }),
       });
 
       const data = await response.json();
-
       if (data.success) {
-        // ✅ MUDANÇA PRINCIPAL: NÃO adicionar o áudio localmente
-        // O áudio será adicionado automaticamente quando o webhook processar
-        // e enviar a notificação SSE que dispara o loadMessages()
-        
-        console.log("✅ Áudio enviado com sucesso, aguardando processamento via webhook");
-        
-        // O SSE irá disparar o evento 'sse-chat-update' que recarrega as mensagens
-        // e o áudio aparecerá quando estiver completamente processado
+        console.log("✅ Áudio enviado com sucesso");
+        loadMessages(true);
       } else {
-        alert("Erro ao enviar áudio: " + data.message);
+        console.error("❌ Erro ao enviar áudio:", data.message);
       }
     } catch (error) {
-      console.error("Erro ao enviar áudio:", error);
-      alert("Erro ao enviar áudio: " + (error as Error).message);
+      console.error("❌ Erro ao enviar áudio:", error);
     } finally {
       setSending(false);
     }
@@ -394,8 +470,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
 
   const playAudio = (audioUrl: string, messageId: string) => {
     if (playingAudio === messageId) {
-      audioRef.current?.pause();
-      setPlayingAudio(null);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        setPlayingAudio(null);
+      }
     } else {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -457,6 +535,84 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       }
     } catch (error) {
       console.error("Erro ao editar mensagem:", error);
+    }
+  };
+
+  const togglePhotoInGallery = async (photoId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        buildUrl(`/dashboard/messages/photos/${photoId}/toggle-gallery`),
+        {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        // Atualizar estado local
+        setPhotos(prev => 
+          prev.map(p => 
+            p.id === photoId 
+              ? { ...p, savedInGallery: data.photo.savedInGallery }
+              : p
+          )
+        );
+        
+        // Atualizar selectedPhoto se for a mesma foto
+        if (selectedPhoto?.id === photoId) {
+          setSelectedPhoto(prev => 
+            prev ? { ...prev, savedInGallery: data.photo.savedInGallery } : null
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar/remover foto da galeria:", error);
+    }
+  };
+
+  const toggleVideoInGallery = async (videoId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        buildUrl(`/dashboard/messages/videos/${videoId}/toggle-gallery`),
+        {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        // Atualizar estado local
+        setVideos(prev => 
+          prev.map(v => 
+            v.id === videoId 
+              ? { ...v, savedInGallery: data.video.savedInGallery }
+              : v
+          )
+        );
+        
+        // Atualizar selectedVideo se for o mesmo vídeo
+        if (selectedVideo?.id === videoId) {
+          setSelectedVideo(prev => 
+            prev ? { ...prev, savedInGallery: data.video.savedInGallery } : null
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar/remover vídeo da galeria:", error);
     }
   };
 
@@ -548,8 +704,12 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
             ) : (
               getCombinedMessages().map((item) => {
                 const isAudio = 'type' in item && item.type === 'audio';
+                const isPhoto = 'type' in item && item.type === 'photo';
+                const isVideo = 'type' in item && item.type === 'video';
                 const audio = isAudio ? item as Audio & { type: 'audio' } : null;
-                const message = !isAudio ? item as Message : null;
+                const photo = isPhoto ? item as Photo & { type: 'photo' } : null;
+                const video = isVideo ? item as Video & { type: 'video' } : null;
+                const message = !isAudio && !isPhoto && !isVideo ? item as Message : null;
 
                 if (isAudio && audio) {
                   // Renderizar áudio
@@ -579,6 +739,172 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                           >
                             {formatTime(audio.timestamp)}
                           </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isPhoto && photo) {
+                  // Renderizar foto
+                  return (
+                    <div
+                      key={photo.messageId}
+                      className={`flex ${photo.fromMe ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`group max-w-[70%] rounded-2xl overflow-hidden ${
+                          photo.fromMe
+                            ? "bg-gradient-to-br from-green-500 to-emerald-600"
+                            : "bg-white shadow-sm border border-gray-100"
+                        }`}
+                      >
+                        {/* Foto em miniatura */}
+                        <div 
+                          className="relative cursor-pointer"
+                          onClick={() => setSelectedPhoto(photo)}
+                        >
+                          <img
+                            src={photo.imageUrl}
+                            alt="Foto"
+                            className="max-w-[300px] max-h-[400px] object-contain"
+                            loading="lazy"
+                          />
+                          {/* Overlay ao hover */}
+                          <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <svg 
+                                className="w-12 h-12 text-white drop-shadow-lg" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  strokeWidth={2} 
+                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" 
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Caption da foto */}
+                        {photo.caption && photo.caption.trim() !== "" && (
+                          <div className={`px-3 py-2 ${photo.fromMe ? "text-white" : "text-gray-900"}`}>
+                            <p className="text-sm break-words">{photo.caption}</p>
+                          </div>
+                        )}
+
+                        {/* Footer com timestamp e opções */}
+                        <div className={`px-3 py-2 ${photo.fromMe ? "text-white" : "text-gray-900"}`}>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] ${photo.fromMe ? "text-white/70" : "text-gray-500"}`}>
+                              {formatTime(photo.timestamp)}
+                            </span>
+                            
+                            {/* Dropdown com opções */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-6 w-6 p-0 ${
+                                    photo.fromMe 
+                                      ? "hover:bg-white/20 text-white" 
+                                      : "hover:bg-gray-100 text-gray-600"
+                                  }`}
+                                >
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => togglePhotoInGallery(photo.id)}>
+                                  {photo.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isVideo && video) {
+                  // Renderizar vídeo
+                  return (
+                    <div
+                      key={video.messageId}
+                      className={`flex ${video.fromMe ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`group max-w-[70%] rounded-2xl overflow-hidden ${
+                          video.fromMe
+                            ? "bg-gradient-to-br from-green-500 to-emerald-600"
+                            : "bg-white shadow-sm border border-gray-100"
+                        }`}
+                      >
+                        {/* Vídeo em miniatura */}
+                        <div 
+                          className="relative cursor-pointer"
+                          onClick={() => setSelectedVideo(video)}
+                        >
+                          <video
+                            src={video.videoUrl}
+                            className="max-w-[300px] max-h-[400px] object-contain"
+                          />
+                          {/* Overlay com ícone de play */}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
+                            <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
+                              <svg className="w-8 h-8 text-gray-800 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                              </svg>
+                            </div>
+                          </div>
+                          {/* Duração do vídeo */}
+                          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                            {formatDuration(video.seconds)}
+                          </div>
+                        </div>
+
+                        {/* Caption do vídeo */}
+                        {video.caption && video.caption.trim() !== "" && (
+                          <div className={`px-3 py-2 ${video.fromMe ? "text-white" : "text-gray-900"}`}>
+                            <p className="text-sm break-words">{video.caption}</p>
+                          </div>
+                        )}
+
+                        {/* Footer com timestamp e opções */}
+                        <div className={`px-3 py-2 ${video.fromMe ? "text-white" : "text-gray-900"}`}>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] ${video.fromMe ? "text-white/70" : "text-gray-500"}`}>
+                              {formatTime(video.timestamp)}
+                            </span>
+                            
+                            {/* Dropdown com opções */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-6 w-6 p-0 ${
+                                    video.fromMe 
+                                      ? "hover:bg-white/20 text-white" 
+                                      : "hover:bg-gray-100 text-gray-600"
+                                  }`}
+                                >
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => toggleVideoInGallery(video.id)}>
+                                  {video.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -709,6 +1035,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
             <div className="flex items-center gap-2">
               <EmojiPicker onEmojiSelect={handleEmojiSelect} />
               <PreConfiguredTextsPicker onSelectText={handlePreConfiguredTextSelect} />
+              
               <Input
                 ref={inputRef}
                 value={newMessage}
@@ -723,25 +1050,77 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                 className="flex-1 rounded-full border-gray-200 focus:ring-2 focus:ring-green-500"
                 disabled={sending}
               />
-              <AudioRecorder 
-                onAudioRecorded={handleAudioRecorded}
-                disabled={sending}
-              />
+
+              {/* Botão Galeria */}
               <Button
-                onClick={sendMessage}
-                className="rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 w-10 p-0"
-                disabled={sending || !newMessage.trim()}
+                onClick={handleGalleryButtonClick}
+                variant="ghost"
+                size="sm"
+                className="h-10 w-10 p-0 rounded-full hover:bg-gray-100"
+                disabled={sending}
               >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
+                <Images className="h-5 w-5 text-gray-600" />
               </Button>
+
+              {/* Botão Conjugado: Enviar OU Gravar Áudio */}
+              {newMessage.trim().length > 0 ? (
+                // Botão de Enviar (quando tem texto)
+                <Button
+                  onClick={sendMessage}
+                  className="rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 w-10 p-0"
+                  disabled={sending || !newMessage.trim()}
+                >
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              ) : (
+                // Botão de Gravar Áudio (quando não tem texto)
+                <AudioRecorder 
+                  onAudioRecorded={handleAudioRecorded}
+                  disabled={sending}
+                />
+              )}
             </div>
           </div>
         </div>
       </CardContent>
+
+      {selectedPhoto && (
+        <PhotoViewer
+          photo={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+          onToggleGallery={togglePhotoInGallery}
+        />
+      )}
+
+      {selectedVideo && (
+        <VideoViewer
+          video={selectedVideo}
+          onClose={() => setSelectedVideo(null)}
+          onToggleGallery={toggleVideoInGallery}
+        />
+      )}
+
+      {/* Modal Seletor de Tipo de Mídia */}
+      {showMediaTypeSelector && (
+        <MediaTypeSelectorModal
+          onSelectType={handleMediaTypeSelect}
+          onClose={() => setShowMediaTypeSelector(false)}
+        />
+      )}
+
+      {/* Modal Galeria em Modo Seleção */}
+      {showGalleryModal && (
+        <GalleryModal
+          onClose={() => setShowGalleryModal(false)}
+          selectionMode={true}
+          filterType={galleryFilterType}
+          onMediaSelected={handleMediaSelected}
+        />
+      )}
     </Card>
   );
 };

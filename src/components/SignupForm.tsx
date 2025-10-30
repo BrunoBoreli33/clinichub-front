@@ -111,7 +111,7 @@ const SignupForm = () => {
                   </h2>
                 </div>
                 <p className="text-lg text-white drop-shadow-md max-w-md">
-                  Crie sua conta para acessar o sistema de monitoramento da clínica.
+                  Crie sua conta para acessar o sistema de monitoramento.
                 </p>
               </div>
             </div>

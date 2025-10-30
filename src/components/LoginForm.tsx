@@ -168,7 +168,7 @@ const LoginForm = () => {
                     <MessageCircle className="w-6 h-6 text-white" />
                   </div>
                   <h2 className="text-2xl font-bold text-white drop-shadow-lg">
-                    WhatsApp Business Monitor
+                    ClinicHub WhatsApp Monitor
                   </h2>
                 </div>
                 <p className="text-lg text-white drop-shadow-md max-w-md">
