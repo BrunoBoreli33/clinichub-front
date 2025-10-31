@@ -7,7 +7,8 @@ import { Eye, EyeOff, Shield, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { buildUrl } from "@/lib/api";
-import clinicHero from "@/assets/clinic-hero.jpg";
+import clinicHubIco from "@/assets/clinichub.ico";
+import clincHubLogo from "@/assets/clinichub-logo.png";
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -157,45 +158,39 @@ const LoginForm = () => {
         <div className="hidden lg:block relative">
           <div className="relative overflow-hidden rounded-2xl">
             <img
-              src={clinicHero}
+              src={clincHubLogo}
               alt="Ambiente clínico moderno"
               className="w-full h-[600px] object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-primary/30 to-transparent">
-              <div className="absolute bottom-8 left-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 text-white" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-white drop-shadow-lg">
-                    ClinicHub WhatsApp Monitor
-                  </h2>
-                </div>
-                <p className="text-lg text-white drop-shadow-md max-w-md">
-                  Sistema profissional de monitoramento e gestão de mensagens
-                  WhatsApp Business para sua clínica.
-                </p>
-              </div>
-            </div>
+
           </div>
         </div>
 
         {/* Lado direito - Formulário de login */}
         <div className="w-full max-w-md mx-auto">
+
           <Card className="shadow-medical bg-gradient-card border-0">
-            <CardHeader className="text-center pb-6">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <div className="p-2 bg-gradient-primary rounded-xl">
-                  <Shield className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-2xl font-bold text-foreground">
-                  Acesso Clínica
-                </CardTitle>
-              </div>
-              <p className="text-muted-foreground">
-                Entre com suas credenciais para acessar o sistema de monitoramento
-              </p>
-            </CardHeader>
+
+<CardHeader className="text-center pb-6">
+  <div className="flex items-center justify-center gap-2 mb-4">
+    <CardTitle className="text-2xl font-bold text-foreground">
+    </CardTitle>
+  </div>
+
+  {/* Ícone centralizado */}
+  <div className="flex justify-center mb-4">
+    <img
+      src={clinicHubIco}
+      alt="Logo ClinicHub"
+      className="w-20 h-20 md:w-24 md:h-24 rounded-full shadow-md animate-bounce"
+    />
+  </div>
+
+  <p className="text-muted-foreground">
+    Seu hub de inteligência clínica começa aqui. Faça login para continuar.
+  </p>
+</CardHeader>
+
 
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-6">

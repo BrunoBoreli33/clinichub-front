@@ -31,6 +31,7 @@ import LoadingChats from "./LoadingChats";
 import type { ChatsData } from "@/types/chat";
 import { buildUrl } from "@/lib/api";
 import { useNotifications, NewMessageNotification, ChatUpdateNotification, TagUpdateNotification, TagDeleteNotification } from "@/hooks/useNotifications";
+import clinicHubIco from "@/assets/clinichub.ico";
 
 interface DashboardData {
   user: {
@@ -81,9 +82,13 @@ const Sidebar: React.FC<{
       >
         <div className="p-4 flex items-center justify-between border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-md flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-white" />
-            </div>
+  <div className="flex justify-center">
+    <img
+      src={clinicHubIco}
+      alt="Logo ClinicHub"
+      className="w-14 h-14 md:w-14 md:h-14 rounded-full shadow-md"
+    />
+  </div>
             <div>
               <span className="font-semibold text-gray-900 text-lg block">Menu</span>
               <span className="text-xs text-gray-500">{userName}</span>
@@ -1041,12 +1046,16 @@ const Dashboard: React.FC = () => {
             </button>
 
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
-                <MessageCircle className="w-6 h-6 text-white" />
-              </div>
+              <div className="flex justify-center">
+              <img
+              src={clinicHubIco}
+              alt="Logo ClinicHub"
+              className="w-12 h-12 md:w-12 md:h-12 rounded-full shadow-md animate-pulse"
+              />
+            </div>
               <div className="flex flex-col leading-tight text-center">
-                <h1 className="text-[15px] font-semibold text-[#1a1a1a]">WhatsApp Business Monitor</h1>
-                <p className="text-[13px] text-[#6b7a89]">Sistema de Gestão de Conversas</p>
+                <h1 className="text-[15px] font-semibold text-[#1a1a1a]">ClinicHub CRM</h1>
+                <p className="text-[13px] text-[#6b7a89]">Hybrid Intelligence for Customer Relations</p>
               </div>
             </div>
 

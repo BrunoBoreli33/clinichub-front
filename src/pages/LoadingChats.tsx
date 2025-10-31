@@ -3,6 +3,7 @@ import { Progress } from "@/components/ui/progress";
 import { buildUrl } from "@/lib/api";
 import { MessageCircle, Users, Image } from "lucide-react";
 import { ChatsData } from "@/types/chat";  // ✅ Import correto
+import clinicHubIco from "@/assets/clinichub.ico";
 
 interface LoadingChatsProps {
   onLoadingComplete: (chatsData: ChatsData | null) => void;
@@ -114,14 +115,18 @@ const LoadingChats = ({ onLoadingComplete, totalChats }: LoadingChatsProps) => {
         {/* Logo e Título */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="p-4 bg-gradient-to-b from-green-400 to-green-600 rounded-2xl shadow-lg animate-pulse">
-              <MessageCircle className="w-16 h-16 text-white" />
-            </div>
+        <div className="flex justify-center">
+          <img
+            src={clinicHubIco}
+            alt="Logo ClinicHub"
+            className="w-14 h-14 md:w-14 md:h-14 rounded-full shadow-md animate-bounce"
+          />
+        </div>
           </div>
           
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              WhatsApp Business Monitor
+              ClinicHub 
             </h2>
             <p className="text-sm text-gray-600 mt-2">
               {statusMessage}
