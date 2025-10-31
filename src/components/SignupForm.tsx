@@ -7,7 +7,9 @@ import { Eye, EyeOff, Mail, Lock, User, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { buildUrl } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
-import clinicHero from "@/assets/clinic-hero.jpg";
+
+import clincHubLogo from "@/assets/clinichub-logo.png";
+import clinicHubIco from "@/assets/clinichub.ico";
 
 const SignupForm = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -96,25 +98,11 @@ const SignupForm = () => {
         <div className="hidden lg:block relative">
           <div className="relative overflow-hidden rounded-2xl">
             <img
-              src={clinicHero}
+              src={clincHubLogo}
               alt="Ambiente clínico moderno"
               className="w-full h-[600px] object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-primary/30 to-transparent">
-              <div className="absolute bottom-8 left-8 text-white">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-white" />
-                  </div>
-                  <h2 className="text-2xl font-bold drop-shadow-lg">
-                    Registro de Clínica
-                  </h2>
-                </div>
-                <p className="text-lg text-white drop-shadow-md max-w-md">
-                  Crie sua conta para acessar o sistema de monitoramento.
-                </p>
-              </div>
-            </div>
+
           </div>
         </div>
 
@@ -123,15 +111,21 @@ const SignupForm = () => {
           <Card className="shadow-medical bg-gradient-card border-0">
             <CardHeader className="text-center pb-8">
               <div className="flex items-center justify-center gap-2 mb-6">
-                <div className="p-2 bg-gradient-primary rounded-xl">
-                  <Shield className="w-6 h-6 text-white" />
-                </div>
+
+        <div className="flex justify-center">
+          <img
+            src={clinicHubIco}
+            alt="Logo ClinicHub"
+            className="w-14 h-14 md:w-14 md:h-14 rounded-full shadow-md"
+          />
+        </div>
+
                 <CardTitle className="text-2xl font-bold text-foreground">
-                  Registro Clínica
+                  Evolua com inteligência
                 </CardTitle>
               </div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">
-                Crie sua conta
+              <h2 className="text-xl font-semibold text-gray-600 mb-2">
+                Dê o primeiro passo para uma clínica mais inteligente.
               </h2>
             </CardHeader>
 
