@@ -30,7 +30,7 @@ import Toast from "@/components/Toast";
 import LoadingChats from "./LoadingChats";
 import type { ChatsData } from "@/types/chat";
 import { buildUrl } from "@/lib/api";
-import { useNotifications, NewMessageNotification, ChatUpdateNotification, TagUpdateNotification, TagDeleteNotification } from "@/hooks/useNotifications";
+import { useNotifications, NewMessageNotification, ChatUpdateNotification, TagUpdateNotification, TagDeleteNotification, TaskCompletedNotification } from "@/hooks/useNotifications";
 import clinicHubIco from "@/assets/clinichub.ico";
 
 interface DashboardData {
@@ -708,11 +708,20 @@ const Dashboard: React.FC = () => {
     setTagsVersion(prev => prev + 1);
   }, [isConnected, chatsData, debouncedFetchChats]);
 
+  const handleTaskCompleted = useCallback((data: TaskCompletedNotification) => {
+    console.log('✅ Tarefa concluída via SSE:', data);
+    
+    if (isConnected && chatsData) {
+      fetchChats(true);
+    }
+  }, [isConnected, chatsData, fetchChats]);
+
   const { setOpenChatId } = useNotifications({
     onNewMessage: handleNewMessage,
     onChatUpdate: handleChatUpdate,
     onTagUpdate: handleTagUpdate,
     onTagDelete: handleTagDelete,
+    onTaskCompleted: handleTaskCompleted,
     onConnected: () => {
       console.log('✅ Sistema de notificações ativo');
       setNotificationEnabled(true);
