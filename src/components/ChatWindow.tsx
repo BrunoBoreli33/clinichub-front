@@ -124,6 +124,11 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [galleryFilterType, setGalleryFilterType] = useState<'photos' | 'videos'>('photos');
   
+  // Estados para controlar carregamento de mídias
+  const [loadedMediaCount, setLoadedMediaCount] = useState(0);
+  const [totalMediaCount, setTotalMediaCount] = useState(0);
+  const [allMediaLoaded, setAllMediaLoaded] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -131,12 +136,33 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const isInitialLoadRef = useRef(true);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Handler para quando uma mídia carrega
+  const handleMediaLoad = () => {
+    setLoadedMediaCount(prev => prev + 1);
+  };
+
+  // Calcular total de mídias quando mensagens carregam
+  useEffect(() => {
+    const total = photos.length + videos.length;
+    setTotalMediaCount(total);
+    setLoadedMediaCount(0);
+    setAllMediaLoaded(total === 0); // Se não há mídias, já está tudo carregado
+  }, [photos.length, videos.length]);
+
+  // Verificar se todas as mídias foram carregadas
+  useEffect(() => {
+    if (totalMediaCount > 0 && loadedMediaCount >= totalMediaCount) {
+      setAllMediaLoaded(true);
+    }
+  }, [loadedMediaCount, totalMediaCount]);
+
+  // Scroll inicial apenas quando tudo estiver carregado (mensagens + mídias)
   useLayoutEffect(() => {
-    if (isInitialLoadRef.current && messages.length > 0) {
+    if (isInitialLoadRef.current && messages.length > 0 && allMediaLoaded) {
       messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
       isInitialLoadRef.current = false;
     }
-  }, [messages]);
+  }, [messages, allMediaLoaded]);
 
   useEffect(() => {
     if (!isInitialLoadRef.current) {
@@ -769,6 +795,8 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             alt="Foto"
                             className="max-w-[300px] max-h-[400px] object-contain"
                             loading="lazy"
+                            onLoad={handleMediaLoad}
+                            onError={handleMediaLoad}
                           />
                           {/* Overlay ao hover */}
                           <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all flex items-center justify-center">
@@ -854,6 +882,8 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                           <video
                             src={video.videoUrl}
                             className="max-w-[300px] max-h-[400px] object-contain"
+                            onLoadedMetadata={handleMediaLoad}
+                            onError={handleMediaLoad}
                           />
                           {/* Overlay com ícone de play */}
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
