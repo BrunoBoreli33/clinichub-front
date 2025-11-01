@@ -33,6 +33,8 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [instanceToDelete, setInstanceToDelete] = useState<string | null>(null);
   const [selectedInstance, setSelectedInstance] = useState<WebInstance | null>(null);
   const [toast, setToast] = useState<{ message: string; variant?: string } | null>(null);
   const [isCheckingPermission, setIsCheckingPermission] = useState(true);
@@ -256,12 +258,17 @@ const AdminPanel = () => {
   };
 
   const deleteInstance = async (id: string) => {
-    if (!confirm("Tem certeza que deseja deletar esta instância?")) return;
+    setInstanceToDelete(id);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!instanceToDelete) return;
 
     const token = localStorage.getItem("token");
 
     try {
-  const response = await fetch(buildUrl(`/api/dev/webinstances/${id}?confirm=true`), {
+  const response = await fetch(buildUrl(`/api/dev/webinstances/${instanceToDelete}?confirm=true`), {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -279,6 +286,9 @@ const AdminPanel = () => {
     } catch (error) {
       console.error("Erro ao deletar instância:", error);
       showToast("Erro ao deletar instância", "destructive");
+    } finally {
+      setShowDeleteDialog(false);
+      setInstanceToDelete(null);
     }
   };
 
@@ -731,6 +741,58 @@ const AdminPanel = () => {
                 className="flex-1"
               >
                 Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Confirmação de Delete */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 text-xl">
+              ⚠️ Atenção: Exclusão Permanente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-gray-800 font-semibold mb-2">
+                Você está prestes a deletar esta WebInstance permanentemente.
+              </p>
+              <p className="text-gray-700 mb-2">
+                Esta ação irá <span className="font-bold text-red-600">excluir todos os chats</span> e{" "}
+                <span className="font-bold text-red-600">todas as mensagens</span> relacionadas a esta instância.
+              </p>
+              <p className="text-gray-700 font-semibold">
+                Esta operação não pode ser desfeita!
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-sm text-gray-700">
+                💡 <span className="font-semibold">Alternativa:</span> Caso você não queira excluir os chats e mensagens relacionados a essa webinstance, você pode{" "}
+                <span className="font-semibold text-amber-700">inativar a webinstance</span> e apagar manualmente todos os dados relacionados a ela, depois clicar em salvar alterações.
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button 
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setInstanceToDelete(null);
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={confirmDelete}
+                variant="destructive"
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                Continuar e Deletar
               </Button>
             </div>
           </div>
