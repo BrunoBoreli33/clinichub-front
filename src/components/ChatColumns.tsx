@@ -30,6 +30,7 @@ const columnsConfig = [
   { id: "repescagem", title: "Repescagem", color: "from-red-500 to-red-600" },
   { id: "tarefa", title: "Tarefa", color: "from-purple-500 to-purple-600" },
   { id: "lead_quente", title: "Lead Quente", color: "from-yellow-400 to-yellow-500" },
+  { id: "cliente", title: "Cliente", color: "from-emerald-500 to-emerald-600" },
   { id: "lead_frio", title: "Lead Frio", color: "from-gray-400 to-gray-500" }
 ];
 
@@ -618,6 +619,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
     repescagem: [],
     tarefa: [],
     lead_quente: [],
+    cliente: [],
     lead_frio: []
   });
 
@@ -678,6 +680,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
         repescagem: [],
         tarefa: [],
         lead_quente: [],
+        cliente: [],
         lead_frio: []
       };
 
@@ -689,6 +692,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
           'followup': 'repescagem',
           'task': 'tarefa',
           'hot_lead': 'lead_quente',
+          'client': 'cliente',
           'cold_lead': 'lead_frio',
           'Repescagem': 'repescagem',
           'Lead Quente': 'lead_quente',
@@ -736,6 +740,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
       'repescagem': 'followup',
       'tarefa': 'task',
       'lead_quente': 'hot_lead',
+      'cliente': 'client',
       'lead_frio': 'cold_lead'
     };
 
@@ -852,6 +857,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
               repescagem: [],
               tarefa: [],
               lead_quente: [],
+              cliente: [],
               lead_frio: []
             };
 
@@ -863,6 +869,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
                 'followup': 'repescagem',
                 'task': 'tarefa',
                 'hot_lead': 'lead_quente',
+                'client': 'cliente',
                 'cold_lead': 'lead_frio',
                 'Repescagem': 'repescagem',
                 'Lead Quente': 'lead_quente',
