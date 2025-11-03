@@ -849,30 +849,93 @@ const Dashboard: React.FC = () => {
 
   const clearTagSelection = () => setSelectedTagIds(new Set());
 
-  const exportFilteredToCSV = () => {
+  const exportFilteredToCSV = async () => {
     const data = filteredChatsData?.chats || [];
     if (!data.length) {
       showToast({ message: 'Nenhuma conversa para exportar', variant: 'destructive' });
       return;
     }
 
-    const rows = data.map(chat => {
-      const tagNames = (chat.tags || []).map(t => t.name).join('; ');
-      return [chat.name || '', chat.phone || '', tagNames];
-    });
+    try {
+      // Importar biblioteca XLSX dinamicamente
+      const XLSX = await import('xlsx');
+      
+      // Preparar dados
+      const rows = data.map(chat => ({
+        'Nome': chat.name || '',
+        'Telefone': chat.phone || '',
+        'Etiquetas': (chat.tags || []).map(t => t.name).join('; ')
+      }));
 
-    const header = ['Nome', 'Telefone', 'Etiquetas'];
-    const csvContent = [header, ...rows].map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      // Criar worksheet
+      const ws = XLSX.utils.json_to_sheet(rows);
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `chats_export_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+      // Definir larguras das colunas
+      ws['!cols'] = [
+        { wch: 35 },  // Nome
+        { wch: 20 },  // Telefone
+        { wch: 30 }   // Etiquetas
+      ];
+
+      // Aplicar formatação ao cabeçalho (linha 1)
+      const headerCells = ['A1', 'B1', 'C1'];
+      headerCells.forEach(cell => {
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { bold: true },
+            alignment: { horizontal: 'center', vertical: 'center' }
+          };
+        }
+      });
+
+      // Aplicar formatação às células de dados
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        // Coluna A (Nome) - Alinhada à esquerda
+        const cellA = XLSX.utils.encode_cell({ r: R, c: 0 });
+        if (ws[cellA]) {
+          ws[cellA].s = {
+            alignment: { horizontal: 'left', vertical: 'center' }
+          };
+        }
+
+        // Coluna B (Telefone) - Centralizada e formato texto
+        const cellB = XLSX.utils.encode_cell({ r: R, c: 1 });
+        if (ws[cellB]) {
+          ws[cellB].t = 's'; // Força tipo string
+          ws[cellB].s = {
+            alignment: { horizontal: 'center', vertical: 'center' }
+          };
+        }
+
+        // Coluna C (Etiquetas) - Centralizada
+        const cellC = XLSX.utils.encode_cell({ r: R, c: 2 });
+        if (ws[cellC]) {
+          ws[cellC].s = {
+            alignment: { horizontal: 'center', vertical: 'center' }
+          };
+        }
+      }
+
+      // Criar workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Conversas');
+
+      // Exportar arquivo
+      XLSX.writeFile(wb, `chats_export_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.xlsx`);
+
+      showToast({ 
+        message: 'Exportação concluída!', 
+        description: `${data.length} conversas exportadas com sucesso.` 
+      });
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
+      showToast({ 
+        message: 'Erro ao exportar', 
+        description: 'Não foi possível gerar o arquivo.',
+        variant: 'destructive' 
+      });
+    }
   };
 
   useEffect(() => {
