@@ -27,11 +27,19 @@ export interface TagDeleteNotification {
   tagName: string;
 }
 
+export interface TaskCompletedNotification {
+  taskId: string;
+  chatId: string;
+  chatName: string;
+  chatColumn: string;
+}
+
 interface UseNotificationsOptions {
   onNewMessage?: (data: NewMessageNotification) => void;
   onChatUpdate?: (data: ChatUpdateNotification) => void;
   onTagUpdate?: (data: TagUpdateNotification) => void;
   onTagDelete?: (data: TagDeleteNotification) => void;
+  onTaskCompleted?: (data: TaskCompletedNotification) => void;
   onConnected?: () => void;
   onError?: (error: Error) => void;
 }
@@ -237,6 +245,17 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
           callbacksRef.current.onTagDelete?.(data);
         } catch (error) {
           console.error('Erro ao processar exclusão de tag:', error);
+        }
+      });
+
+      // Evento de conclusão de tarefa
+      eventSource.addEventListener('task-completed', (event) => {
+        try {
+          const data: TaskCompletedNotification = JSON.parse(event.data);
+          console.log('✅ Conclusão de tarefa via SSE:', data);
+          callbacksRef.current.onTaskCompleted?.(data);
+        } catch (error) {
+          console.error('Erro ao processar conclusão de tarefa:', error);
         }
       });
 
