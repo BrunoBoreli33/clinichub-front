@@ -7,7 +7,8 @@ import { ArrowLeft, Mail, Shield, CheckCircle, Lock, AlertCircle } from "lucide-
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/http";
-import clinicHero from "@/assets/clinic-hero.jpg";
+
+import clincHubLogo from "@/assets/clinichub-logo.png";
 
 type Step = "email" | "code" | "password" | "success";
 
@@ -205,7 +206,7 @@ const ForgotPassword = () => {
           <div className="hidden lg:block relative">
             <div className="relative overflow-hidden rounded-2xl">
               <img 
-                src={clinicHero} 
+                src={clincHubLogo} 
                 alt="Ambiente clínico moderno" 
                 className="w-full h-[600px] object-cover"
               />
@@ -263,7 +264,7 @@ const ForgotPassword = () => {
           <div className="hidden lg:block relative">
             <div className="relative overflow-hidden rounded-2xl">
               <img 
-                src={clinicHero} 
+                src={clincHubLogo} 
                 alt="Ambiente clínico moderno" 
                 className="w-full h-[600px] object-cover"
               />
@@ -381,7 +382,7 @@ const ForgotPassword = () => {
           <div className="hidden lg:block relative">
             <div className="relative overflow-hidden rounded-2xl">
               <img 
-                src={clinicHero} 
+                src={clincHubLogo} 
                 alt="Ambiente clínico moderno" 
                 className="w-full h-[600px] object-cover"
               />
@@ -492,7 +493,7 @@ const ForgotPassword = () => {
           <div className="hidden lg:block relative">
             <div className="relative overflow-hidden rounded-2xl">
               <img 
-                src={clinicHero} 
+                src={clincHubLogo} 
                 alt="Ambiente clínico moderno" 
                 className="w-full h-[600px] object-cover"
               />
@@ -578,23 +579,11 @@ const ForgotPassword = () => {
         <div className="hidden lg:block relative">
           <div className="relative overflow-hidden rounded-2xl">
             <img 
-              src={clinicHero} 
+              src={clincHubLogo} 
               alt="Ambiente clínico moderno" 
               className="w-full h-[600px] object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-primary/30 to-transparent">
-              <div className="absolute bottom-8 left-8 text-white">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-gradient-to-b from-green-400 to-green-600 rounded-lg shadow-lg flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-white" />
-                  </div>
-                    <h2 className="text-2xl font-bold text-white drop-shadow-lg">Recuperação de senha</h2>
-                  </div>
-                  <p className="text-lg text-white drop-shadow-md max-w-md">
-                    Insira seu e-mail para receber instruções de redefinição de senha.
-                  </p>
-              </div>
-            </div>
+
           </div>
         </div>
 
