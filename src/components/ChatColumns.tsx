@@ -230,6 +230,26 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   };
 
   const handleMoveFromDropdown = (chatId: string, toColumnId: string) => {
+    // ✅ Bloqueia movimentação de chats na coluna "repescagem"
+    if (id === "repescagem") {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "Chats na coluna 'Repescagem' só podem ser movidos automaticamente pelo sistema de rotinas. Não é permitido mover manualmente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // ✅ Bloqueia movimentação de chats na coluna "tarefa"
+    if (id === "tarefa") {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "Chats na coluna 'Tarefa' são gerenciados exclusivamente pelo backend. Não é permitido mover manualmente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (toColumnId === "repescagem") {
       showToast?.({
         message: "Movimentação bloqueada",
