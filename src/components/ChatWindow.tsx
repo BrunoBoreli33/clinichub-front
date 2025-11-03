@@ -79,7 +79,7 @@ interface Video {
   caption?: string;
 }
 
-// Tipo para itens vindos da galeria (compatÃ­vel com GalleryModal)
+// Tipo para itens vindos da galeria (compatível com GalleryModal)
 type GalleryMediaItem = {
   id: string;
   imageUrl?: string;
@@ -119,7 +119,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   
-  // Estados para galeria e seletor de mÃ­dia
+  // Estados para galeria e seletor de mídia
   const [showMediaTypeSelector, setShowMediaTypeSelector] = useState(false);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [galleryFilterType, setGalleryFilterType] = useState<'photos' | 'videos'>('photos');
@@ -129,12 +129,18 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [totalMediaCount, setTotalMediaCount] = useState(0);
   const [allMediaLoaded, setAllMediaLoaded] = useState(false);
   
+  // ✅ Estado para controlar scroll durante edição
+  const [preventAutoScroll, setPreventAutoScroll] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isInitialLoadRef = useRef(true);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // ✅ Ref para a mensagem sendo editada
+  const editingMessageRef = useRef<HTMLDivElement | null>(null);
 
   // Handler para quando uma mídia carrega
   const handleMediaLoad = () => {
@@ -165,7 +171,8 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   }, [messages, allMediaLoaded]);
 
   useEffect(() => {
-    if (!isInitialLoadRef.current) {
+    // ✅ NÃO fazer scroll automático se estiver editando ou preventAutoScroll estiver ativo
+    if (!isInitialLoadRef.current && !editingMessageId && !preventAutoScroll) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
     
@@ -174,7 +181,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [messages.length, editingMessageId, shouldAutoFocus]);
+  }, [messages.length, editingMessageId, shouldAutoFocus, preventAutoScroll]);
 
   // ✅ Notificar quando chat abre/fecha
   useEffect(() => {
@@ -247,7 +254,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     }
   }, [chat.id]);
 
-  // FunÃ§Ãµes de controle da galeria
+  // Funções de controle da galeria
   const handleGalleryButtonClick = () => {
     setShowMediaTypeSelector(true);
   };
@@ -259,7 +266,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   };
 
   const handleMediaSelected = async (items: GalleryMediaItem[], type: 'photo' | 'video') => {
-    console.log(`ðŸ“¤ Enviando ${items.length} ${type === 'photo' ? 'fotos' : 'vÃ­deos'}`);
+    console.log(`📤 Enviando ${items.length} ${type === 'photo' ? 'fotos' : 'vídeos'}`);
     setSending(true);
 
     const token = localStorage.getItem("token");
@@ -300,10 +307,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      console.log("âœ… Todas as mÃ­dias foram enviadas");
+      console.log("✅ Todas as mídias foram enviadas");
       loadMessages(true);
     } catch (error) {
-      console.error("âŒ Erro ao enviar mÃ­dias:", error);
+      console.error("❌ Erro ao enviar mídias:", error);
     } finally {
       setSending(false);
     }
@@ -533,6 +540,17 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const startEdit = (message: Message) => {
     setEditingMessageId(message.messageId);
     setEditContent(message.content);
+    setPreventAutoScroll(true);
+    
+    // ✅ Fazer scroll até a mensagem sendo editada
+    setTimeout(() => {
+      if (editingMessageRef.current) {
+        editingMessageRef.current.scrollIntoView({ 
+          behavior: "smooth", 
+          block: "center" 
+        });
+      }
+    }, 100);
   };
 
   const saveEdit = async (messageId: string) => {
@@ -557,10 +575,16 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       if (data.success) {
         setEditingMessageId(null);
         setEditContent("");
-        loadMessages();
+        await loadMessages(true);
+        
+        // ✅ Manter o preventAutoScroll ativo por mais tempo
+        setTimeout(() => {
+          setPreventAutoScroll(false);
+        }, 1000);
       }
     } catch (error) {
       console.error("Erro ao editar mensagem:", error);
+      setPreventAutoScroll(false);
     }
   };
 
@@ -947,6 +971,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                     <div
                       key={message.messageId}
                       className={`flex ${message.fromMe ? "justify-end" : "justify-start"}`}
+                      ref={editingMessageId === message.messageId ? editingMessageRef : null}
                     >
                       <div
                         className={`group max-w-[70%] rounded-2xl px-4 py-2 ${
