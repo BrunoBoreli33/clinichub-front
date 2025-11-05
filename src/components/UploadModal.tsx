@@ -242,24 +242,6 @@ const UploadModal = ({ onClose }: UploadModalProps) => {
               </>
             )}
           </Button>
-
-          <Button
-            onClick={() => handleFileSelect('video')}
-            disabled={!savedPhoneNumber || uploading}
-            className="w-full bg-purple-600 hover:bg-purple-700"
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              <>
-                <Upload className="h-5 w-5 mr-2" />
-                Enviar Vídeos
-              </>
-            )}
-          </Button>
         </div>
 
         {/* Info */}
@@ -267,8 +249,8 @@ const UploadModal = ({ onClose }: UploadModalProps) => {
           <p className="text-sm text-blue-800">
             <strong>Como funciona:</strong><br />
             1. Configure seu número de WhatsApp<br />
-            2. Selecione fotos ou vídeos do computador<br />
-            3. As mídias serão enviadas para seu número<br />
+            2. Selecione fotos do computador<br />
+            3. As fotos serão enviadas para seu número<br />
             4. Automaticamente aparecerão na galeria
           </p>
         </div>
