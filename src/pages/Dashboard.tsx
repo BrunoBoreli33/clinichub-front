@@ -669,6 +669,11 @@ const Dashboard: React.FC = () => {
     debouncedFetchChats(true, 300);
   }, [debouncedFetchChats]);
 
+  const handleColumnChange = useCallback(() => {
+    console.log("🔄 Recarregando chats após mudança de coluna");
+    fetchChats(true);
+  }, [fetchChats]);
+
   // ✅ MODIFICADO: Atualizar imediatamente ao receber mensagem (sem debounce)
   const handleNewMessage = useCallback((data: NewMessageNotification) => {
     console.log('📨 Nova mensagem recebida via SSE:', {
@@ -1229,6 +1234,7 @@ const Dashboard: React.FC = () => {
                   showToast={showToast} 
                   tagsVersion={tagsVersion}
                   onChatClosed={reloadChats}
+                  onColumnChange={handleColumnChange}
                   setOpenChatId={setOpenChatId}
                 />
               </div>

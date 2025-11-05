@@ -20,6 +20,7 @@ interface ChatColumnsProps {
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
   tagsVersion?: number;
   onChatClosed?: () => void;
+  onColumnChange?: () => void;
   setOpenChatId?: (chatId: string | null) => void;
 }
 
@@ -630,7 +631,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   );
 };
 
-const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenChatId }: ChatColumnsProps) => {
+const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumnChange, setOpenChatId }: ChatColumnsProps) => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatForTagManager, setChatForTagManager] = useState<Chat | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -811,6 +812,11 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
         [fromColumn]: prev[fromColumn].filter(c => c.id !== chatId),
         [toColumn]: [...(prev[toColumn] || []), { ...chat, column: backendColumn }]
       }));
+
+      // Recarregar chats do Dashboard para sincronizar o estado global
+      if (onColumnChange) {
+        onColumnChange();
+      }
 
       showToast?.({
         message: "Chat movido com sucesso!",
