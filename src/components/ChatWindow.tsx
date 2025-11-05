@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic } from "lucide-react";
+import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic, Copy } from "lucide-react";
 import { buildUrl } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import EmojiPicker from "./EmojiPicker";
 import PreConfiguredTextsPicker from "./PreConfiguredTextsPicker";
 import AudioRecorder from "./AudioRecorder";
@@ -144,6 +145,8 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   
   // ✅ Ref para a mensagem sendo editada
   const editingMessageRef = useRef<HTMLDivElement | null>(null);
+
+  const { toast } = useToast();
 
   // ✅ MODIFICADO: Handler para quando uma mídia carrega individualmente
   const handleMediaLoad = (mediaId: string) => {
@@ -560,6 +563,24 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         });
       }
     }, 100);
+  };
+
+  const copyMessage = (content: string) => {
+    navigator.clipboard.writeText(content)
+      .then(() => {
+        toast({
+          title: "✓ Copiado!",
+          description: `Mensagem "${content}" copiada para a área de transferência!`,
+        });
+      })
+      .catch((err) => {
+        console.error("Erro ao copiar mensagem:", err);
+        toast({
+          title: "Erro",
+          description: "Não foi possível copiar a mensagem",
+          variant: "destructive",
+        });
+      });
   };
 
   const saveEdit = async (messageId: string) => {
@@ -1093,22 +1114,30 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 </span>
                                 {renderMessageStatus(message)}
                               </div>
-                              {message.fromMe && message.type === "text" && message.status !== "SENDING" && (
+                              {message.type === "text" && message.status !== "SENDING" && (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-white/20"
+                                      className={`h-4 w-4 p-0 opacity-0 group-hover:opacity-100 ${
+                                        message.fromMe ? "hover:bg-white/20" : "hover:bg-gray-100"
+                                      }`}
                                     >
                                       <MoreVertical className="h-3 w-3" />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent>
-                                    <DropdownMenuItem onClick={() => startEdit(message)}>
-                                      <Edit className="h-3 w-3 mr-2" />
-                                      Editar mensagem
+                                    <DropdownMenuItem onClick={() => copyMessage(message.content)}>
+                                      <Copy className="h-3 w-3 mr-2" />
+                                      Copiar
                                     </DropdownMenuItem>
+                                    {message.fromMe && (
+                                      <DropdownMenuItem onClick={() => startEdit(message)}>
+                                        <Edit className="h-3 w-3 mr-2" />
+                                        Editar mensagem
+                                      </DropdownMenuItem>
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               )}
