@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar } from "lucide-react";
+import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar, Upload } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 import TaskModal from "./TaskModal";
 import TaskManagerModal from "./Taskmanagermodal";
@@ -20,6 +20,7 @@ interface ChatColumnsProps {
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
   tagsVersion?: number;
   onChatClosed?: () => void;
+  onColumnChange?: () => void;
   setOpenChatId?: (chatId: string | null) => void;
 }
 
@@ -167,9 +168,11 @@ interface ChatColumnProps {
   onOpenTaskManager: (chat: Chat) => void;
   onRefresh: () => void;
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
+  hideUploadChat: boolean;
+  toggleHideUploadChat: () => void;
 }
 
-const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, showToast }: ChatColumnProps) => {
+const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, showToast, hideUploadChat, toggleHideUploadChat }: ChatColumnProps) => {
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
     const saved = localStorage.getItem(`column-${id}-sortOrder`);
     return (saved as "recent" | "oldest") || "recent";
@@ -395,8 +398,33 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
+                    
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="text-xs">
+                        Chat de Upload
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem 
+                          className="text-xs"
+                          onClick={() => {
+                            if (hideUploadChat) toggleHideUploadChat();
+                          }}
+                        >
+                          {!hideUploadChat && "✓ "}Mostrar chat de upload
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-xs"
+                          onClick={() => {
+                            if (!hideUploadChat) toggleHideUploadChat();
+                          }}
+                        >
+                          {hideUploadChat && "✓ "}Ocultar chat de upload
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                <DropdownMenuSeparator />
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -603,7 +631,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   );
 };
 
-const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenChatId }: ChatColumnsProps) => {
+const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumnChange, setOpenChatId }: ChatColumnsProps) => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatForTagManager, setChatForTagManager] = useState<Chat | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -623,6 +651,10 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
     lead_frio: []
   });
 
+  const [hideUploadChat, setHideUploadChat] = useState(
+    localStorage.getItem('hideUploadChat') !== 'false' // true por padrão
+  );
+
   useEffect(() => {
     loadTags();
   }, []);
@@ -639,6 +671,18 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
       setAvailableTags(tags);
     } catch (error) {
       logError("Erro ao carregar tags:", { error });
+    }
+  };
+
+  const toggleHideUploadChat = () => {
+    const newValue = !hideUploadChat;
+    setHideUploadChat(newValue);
+    localStorage.setItem('hideUploadChat', String(newValue));
+    
+    // ✅ CORRIGIDO: Recarregar chats imediatamente para aplicar filtro
+    console.log('🔄 Filtro de chat de upload alterado:', newValue ? 'OCULTAR' : 'MOSTRAR');
+    if (onChatClosed) {
+      onChatClosed();
     }
   };
 
@@ -768,6 +812,11 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
         [fromColumn]: prev[fromColumn].filter(c => c.id !== chatId),
         [toColumn]: [...(prev[toColumn] || []), { ...chat, column: backendColumn }]
       }));
+
+      // Recarregar chats do Dashboard para sincronizar o estado global
+      if (onColumnChange) {
+        onColumnChange();
+      }
 
       showToast?.({
         message: "Chat movido com sucesso!",
@@ -929,6 +978,8 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, setOpenC
                 onOpenTaskManager={handleManageTasks}
                 onRefresh={loadTags}
                 showToast={showToast}
+                hideUploadChat={hideUploadChat}
+                toggleHideUploadChat={toggleHideUploadChat}
               />
             ))}
           </div>

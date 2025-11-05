@@ -20,6 +20,7 @@ export interface Chat {
   profileThumbnail: string | null;
   column: string;
   tags: Tag[];
+  isUploadChat: boolean;  // ✅ NOVO CAMPO
 }
 
 export interface ChatsData {
