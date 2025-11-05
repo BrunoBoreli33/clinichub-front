@@ -129,6 +129,9 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [totalMediaCount, setTotalMediaCount] = useState(0);
   const [allMediaLoaded, setAllMediaLoaded] = useState(false);
   
+  // ✅ NOVO: Estado para rastrear mídias carregadas individualmente
+  const [loadedMedia, setLoadedMedia] = useState<Set<string>>(new Set());
+  
   // ✅ Estado para controlar scroll durante edição
   const [preventAutoScroll, setPreventAutoScroll] = useState(false);
   
@@ -142,8 +145,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   // ✅ Ref para a mensagem sendo editada
   const editingMessageRef = useRef<HTMLDivElement | null>(null);
 
-  // Handler para quando uma mídia carrega
-  const handleMediaLoad = () => {
+  // ✅ MODIFICADO: Handler para quando uma mídia carrega individualmente
+  const handleMediaLoad = (mediaId: string) => {
+    setLoadedMedia(prev => {
+      const newSet = new Set(prev);
+      newSet.add(mediaId);
+      return newSet;
+    });
     setLoadedMediaCount(prev => prev + 1);
   };
 
@@ -152,6 +160,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     const total = photos.length + videos.length;
     setTotalMediaCount(total);
     setLoadedMediaCount(0);
+    setLoadedMedia(new Set()); // ✅ Resetar mídias carregadas
     setAllMediaLoaded(total === 0); // Se não há mídias, já está tudo carregado
   }, [photos.length, videos.length]);
 
@@ -796,7 +805,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                 }
 
                 if (isPhoto && photo) {
-                  // Renderizar foto
+                  // ✅ MODIFICADO: Renderizar foto com container fixo
+                  const mediaId = `photo-${photo.messageId}`;
+                  const isLoaded = loadedMedia.has(mediaId);
+                  
                   return (
                     <div
                       key={photo.messageId}
@@ -809,19 +821,31 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white shadow-sm border border-gray-100"
                         }`}
                       >
-                        {/* Foto em miniatura */}
+                        {/* ✅ Container com aspect-ratio fixo */}
                         <div 
-                          className="relative cursor-pointer"
+                          className="relative cursor-pointer w-full bg-gray-200"
+                          style={{ aspectRatio: '16/9', maxWidth: '300px' }}
                           onClick={() => setSelectedPhoto(photo)}
                         >
+                          {/* ✅ Placeholder enquanto carrega */}
+                          {!isLoaded && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-gray-400 text-sm">...</span>
+                            </div>
+                          )}
+                          
+                          {/* ✅ Imagem com transição de opacity */}
                           <img
                             src={photo.imageUrl}
                             alt="Foto"
-                            className="max-w-[300px] max-h-[400px] object-contain"
+                            className={`w-full h-full object-cover transition-opacity duration-300 ${
+                              isLoaded ? 'opacity-100' : 'opacity-0'
+                            }`}
                             loading="lazy"
-                            onLoad={handleMediaLoad}
-                            onError={handleMediaLoad}
+                            onLoad={() => handleMediaLoad(mediaId)}
+                            onError={() => handleMediaLoad(mediaId)}
                           />
+                          
                           {/* Overlay ao hover */}
                           <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all flex items-center justify-center">
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -885,7 +909,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                 }
 
                 if (isVideo && video) {
-                  // Renderizar vídeo
+                  // ✅ MODIFICADO: Renderizar vídeo com container fixo
+                  const mediaId = `video-${video.messageId}`;
+                  const isLoaded = loadedMedia.has(mediaId);
+                  
                   return (
                     <div
                       key={video.messageId}
@@ -898,17 +925,29 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white shadow-sm border border-gray-100"
                         }`}
                       >
-                        {/* Vídeo em miniatura */}
+                        {/* ✅ Container com aspect-ratio fixo */}
                         <div 
-                          className="relative cursor-pointer"
+                          className="relative cursor-pointer w-full bg-gray-200"
+                          style={{ aspectRatio: '16/9', maxWidth: '300px' }}
                           onClick={() => setSelectedVideo(video)}
                         >
+                          {/* ✅ Placeholder enquanto carrega */}
+                          {!isLoaded && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-gray-400 text-sm">...</span>
+                            </div>
+                          )}
+                          
+                          {/* ✅ Vídeo com transição de opacity */}
                           <video
                             src={video.videoUrl}
-                            className="max-w-[300px] max-h-[400px] object-contain"
-                            onLoadedMetadata={handleMediaLoad}
-                            onError={handleMediaLoad}
+                            className={`w-full h-full object-cover transition-opacity duration-300 ${
+                              isLoaded ? 'opacity-100' : 'opacity-0'
+                            }`}
+                            onLoadedData={() => handleMediaLoad(mediaId)}
+                            onError={() => handleMediaLoad(mediaId)}
                           />
+                          
                           {/* Overlay com ícone de play */}
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
                             <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
@@ -917,6 +956,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                               </svg>
                             </div>
                           </div>
+                          
                           {/* Duração do vídeo */}
                           <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
                             {formatDuration(video.seconds)}
