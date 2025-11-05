@@ -537,14 +537,28 @@ const Dashboard: React.FC = () => {
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>("");
 
+  const shouldHideUploadChat = () => {
+    return localStorage.getItem('hideUploadChat') !== 'false'; // true por padrão
+  };
+
   const filteredChatsData = React.useMemo(() => {
     if (!chatsData) return chatsData;
     
     let filtered = chatsData.chats;
     
+    const hideUpload = shouldHideUploadChat();
+    
+    // ✅ CORRIGIDO: Ocultar chat de upload se configurado
+    if (hideUpload) {
+      filtered = filtered.filter((chat: ChatsData['chats'][number]) => {
+        // Oculta chats onde isUploadChat === true
+        return !chat.isUploadChat;
+      });
+    }
+    
     // Filtro por etiquetas
     if (selectedTagIds.size > 0) {
-      filtered = filtered.filter(chat => chat.tags.some(t => selectedTagIds.has(t.id)));
+      filtered = filtered.filter((chat: ChatsData['chats'][number]) => chat.tags.some((t: { id: string; name: string; color: string }) => selectedTagIds.has(t.id)));
     }
     
     // Filtro por pesquisa (nome ou telefone)

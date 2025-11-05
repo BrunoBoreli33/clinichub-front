@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
-import { X, Loader2, CheckCircle2, Send } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Loader2, CheckCircle2, Send, Upload } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { buildUrl } from "@/lib/api";
 import PhotoViewer from "./PhotoViewer";
 import VideoViewer from "./VideoViewer";
+import UploadModal from "./UploadModal";
 
 interface Photo {
   id: string;
@@ -50,6 +51,10 @@ const GalleryModal = ({ onClose, selectionMode = false, filterType, onMediaSelec
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [filter, setFilter] = useState<'all' | 'photos' | 'videos'>(filterType || 'all');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  
+  // Ref para controlar o polling
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (filterType) {
@@ -60,6 +65,29 @@ const GalleryModal = ({ onClose, selectionMode = false, filterType, onMediaSelec
   useEffect(() => {
     loadGalleryItems();
   }, []);
+
+  // ✅ CORREÇÃO 1: Auto-reload da galeria quando UploadModal está aberto
+  useEffect(() => {
+    if (showUploadModal) {
+      // Inicia polling a cada 3 segundos
+      pollingIntervalRef.current = setInterval(() => {
+        loadGalleryItems();
+      }, 3000);
+    } else {
+      // Para o polling quando o modal é fechado
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    }
+
+    // Cleanup ao desmontar
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [showUploadModal]);
 
   const loadGalleryItems = async () => {
     setLoading(true);
@@ -213,6 +241,9 @@ const GalleryModal = ({ onClose, selectionMode = false, filterType, onMediaSelec
   };
 
   const handleItemClick = (item: MediaItem) => {
+    // ✅ CORREÇÃO 2: Bloquear cliques quando UploadModal está aberto
+    if (showUploadModal) return;
+    
     if (selectionMode) {
       toggleItemSelection(item.id);
     } else {
@@ -227,7 +258,11 @@ const GalleryModal = ({ onClose, selectionMode = false, filterType, onMediaSelec
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-      <Card className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-6xl h-[85vh] z-50 flex flex-col overflow-hidden shadow-2xl">
+      <Card 
+        className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-6xl h-[85vh] z-50 flex flex-col overflow-hidden shadow-2xl ${
+          showUploadModal ? 'pointer-events-none' : ''
+        }`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">
@@ -269,6 +304,15 @@ const GalleryModal = ({ onClose, selectionMode = false, filterType, onMediaSelec
                 onClick={() => setFilter('videos')}
               >
                 Vídeos ({videos.length})
+              </Button>
+              
+              {/* ✅ NOVO: Botão de Upload */}
+              <Button
+                onClick={() => setShowUploadModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white ml-2"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Fazer Upload
               </Button>
             </div>
           )}
@@ -337,7 +381,7 @@ const GalleryModal = ({ onClose, selectionMode = false, filterType, onMediaSelec
                     selectedItems.has(item.id) 
                       ? 'ring-4 ring-green-500 shadow-xl' 
                       : 'hover:shadow-lg'
-                  }`}
+                  } ${showUploadModal ? 'pointer-events-none' : ''}`}
                   onClick={() => handleItemClick(item)}
                 >
                   {item.type === 'photo' ? (
@@ -400,7 +444,7 @@ const GalleryModal = ({ onClose, selectionMode = false, filterType, onMediaSelec
       </Card>
 
       {/* Photo Viewer - apenas se não estiver em modo seleção */}
-      {!selectionMode && selectedPhoto && (
+      {!selectionMode && selectedPhoto && !showUploadModal && (
         <PhotoViewer
           photo={selectedPhoto}
           onClose={() => setSelectedPhoto(null)}
@@ -409,11 +453,22 @@ const GalleryModal = ({ onClose, selectionMode = false, filterType, onMediaSelec
       )}
 
       {/* Video Viewer - apenas se não estiver em modo seleção */}
-      {!selectionMode && selectedVideo && (
+      {!selectionMode && selectedVideo && !showUploadModal && (
         <VideoViewer
           video={selectedVideo}
           onClose={() => setSelectedVideo(null)}
           onToggleGallery={toggleVideoGallery}
+        />
+      )}
+
+      {/* ✅ NOVO: Upload Modal */}
+      {showUploadModal && (
+        <UploadModal 
+          onClose={() => {
+            setShowUploadModal(false);
+            // Recarrega a galeria uma última vez ao fechar
+            loadGalleryItems();
+          }} 
         />
       )}
     </>
