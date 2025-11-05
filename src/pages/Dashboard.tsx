@@ -541,18 +541,31 @@ const Dashboard: React.FC = () => {
     return localStorage.getItem('hideUploadChat') !== 'false'; // true por padrão
   };
 
+  const shouldShowHiddenChats = () => {
+    return localStorage.getItem('showHiddenChats') === 'true'; // false por padrão
+  };
+
   const filteredChatsData = React.useMemo(() => {
     if (!chatsData) return chatsData;
     
     let filtered = chatsData.chats;
     
     const hideUpload = shouldHideUploadChat();
+    const showHidden = shouldShowHiddenChats();
     
     // ✅ CORRIGIDO: Ocultar chat de upload se configurado
     if (hideUpload) {
       filtered = filtered.filter((chat: ChatsData['chats'][number]) => {
         // Oculta chats onde isUploadChat === true
         return !chat.isUploadChat;
+      });
+    }
+    
+    // ✅ NOVO: Filtro de chats ocultos
+    if (!showHidden) {
+      filtered = filtered.filter((chat: ChatsData['chats'][number]) => {
+        // Oculta chats onde isHidden === true quando showHidden está false
+        return !chat.isHidden;
       });
     }
     

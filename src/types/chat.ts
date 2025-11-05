@@ -21,6 +21,7 @@ export interface Chat {
   column: string;
   tags: Tag[];
   isUploadChat: boolean;  // ✅ NOVO CAMPO
+  isHidden: boolean;
 }
 
 export interface ChatsData {

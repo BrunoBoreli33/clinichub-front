@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar, Upload } from "lucide-react";
+import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar, Upload, EyeOff, Eye } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 import TaskModal from "./TaskModal";
 import TaskManagerModal from "./Taskmanagermodal";
@@ -167,12 +167,15 @@ interface ChatColumnProps {
   onCreateTask: (chat: Chat) => void;
   onOpenTaskManager: (chat: Chat) => void;
   onRefresh: () => void;
+  onChatClosed?: () => void;
   showToast?: (toast: { message: string; description?: string; variant?: string }) => void;
   hideUploadChat: boolean;
   toggleHideUploadChat: () => void;
+  showHiddenChats: boolean;
+  toggleShowHiddenChats: () => void;
 }
 
-const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, showToast, hideUploadChat, toggleHideUploadChat }: ChatColumnProps) => {
+const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, onChatClosed, showToast, hideUploadChat, toggleHideUploadChat, showHiddenChats, toggleShowHiddenChats }: ChatColumnProps) => {
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
     const saved = localStorage.getItem(`column-${id}-sortOrder`);
     return (saved as "recent" | "oldest") || "recent";
@@ -224,6 +227,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   const filteredChats = chats.filter(chat => {
     if (!showGroups && chat.isGroup) return false;
     if (!showNewsletters && isNewsletter(chat)) return false;
+    if (!showHiddenChats && chat.isHidden) return false;
     return true;
   });
 
@@ -316,6 +320,54 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
       showToast?.({
         message: "Erro ao resetar rotinas",
         description: "Não foi possível resetar as rotinas",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleChatHidden = async (chatId: string, chatName: string, isCurrentlyHidden: boolean) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showToast?.({
+          message: "Erro de autenticação",
+          description: "Token não encontrado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(buildUrl(`/dashboard/chats/${chatId}/toggle-hidden`), {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showToast?.({
+          message: data.isHidden ? "Chat ocultado" : "Chat exibido",
+          description: `O chat "${chatName}" foi ${data.isHidden ? 'ocultado' : 'exibido'} com sucesso`,
+        });
+        // Recarregar chats para aplicar o filtro
+        if (onChatClosed) {
+          onChatClosed();
+        }
+      } else {
+        showToast?.({
+          message: "Erro ao alternar visibilidade",
+          description: data.message || "Ocorreu um erro desconhecido",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      logError('Erro ao alternar visibilidade do chat', error);
+      showToast?.({
+        message: "Erro ao alternar visibilidade",
+        description: "Não foi possível alterar a visibilidade do chat",
         variant: "destructive",
       });
     }
@@ -422,6 +474,31 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
+                    
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-xs">
+                    Chats Ocultos
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem 
+                      className="text-xs"
+                      onClick={() => {
+                        if (!showHiddenChats) toggleShowHiddenChats();
+                      }}
+                    >
+                      {showHiddenChats && "✓ "}Mostrar chats ocultos
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="text-xs"
+                      onClick={() => {
+                        if (showHiddenChats) toggleShowHiddenChats();
+                      }}
+                    >
+                      {!showHiddenChats && "✓ "}Esconder chats ocultos
+                    </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
@@ -592,6 +669,21 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                               Resetar Rotinas
                             </DropdownMenuItem>
                             
+                            {/* ✅ NOVA OPÇÃO: Ocultar/Exibir Chat */}
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleChatHidden(chat.id, chat.name, chat.isHidden);
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              {chat.isHidden ? (
+                                <><Eye className="mr-2 h-3 w-3" />Exibir este chat</>
+                              ) : (
+                                <><EyeOff className="mr-2 h-3 w-3" />Ocultar este chat</>
+                              )}
+                            </DropdownMenuItem>
+                            
                             <DropdownMenuSeparator />
                             <DropdownMenuItem disabled className="text-xs">
                               <MoveRight className="mr-2 h-3 w-3" />
@@ -655,6 +747,10 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
     localStorage.getItem('hideUploadChat') !== 'false' // true por padrão
   );
 
+  const [showHiddenChats, setShowHiddenChats] = useState(
+    localStorage.getItem('showHiddenChats') === 'true' // false por padrão
+  );
+
   useEffect(() => {
     loadTags();
   }, []);
@@ -681,6 +777,18 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
     
     // ✅ CORRIGIDO: Recarregar chats imediatamente para aplicar filtro
     console.log('🔄 Filtro de chat de upload alterado:', newValue ? 'OCULTAR' : 'MOSTRAR');
+    if (onChatClosed) {
+      onChatClosed();
+    }
+  };
+
+  const toggleShowHiddenChats = () => {
+    const newValue = !showHiddenChats;
+    setShowHiddenChats(newValue);
+    localStorage.setItem('showHiddenChats', String(newValue));
+    
+    console.log('🔄 Filtro de chats ocultos alterado:', newValue ? 'MOSTRAR OCULTOS' : 'OCULTAR OCULTOS');
+    
     if (onChatClosed) {
       onChatClosed();
     }
@@ -977,9 +1085,12 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
                 onCreateTask={handleCreateTask}
                 onOpenTaskManager={handleManageTasks}
                 onRefresh={loadTags}
+                onChatClosed={onChatClosed}
                 showToast={showToast}
                 hideUploadChat={hideUploadChat}
                 toggleHideUploadChat={toggleHideUploadChat}
+                showHiddenChats={showHiddenChats}
+                toggleShowHiddenChats={toggleShowHiddenChats}
               />
             ))}
           </div>
