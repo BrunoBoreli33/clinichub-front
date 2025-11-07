@@ -13,6 +13,7 @@ import AudioRecorder from "./AudioRecorder";
 import AudioPlayer from "./AudioPlayer";
 import PhotoViewer from "./PhotoViewer";
 import VideoViewer from "./VideoViewer";
+import DocumentViewer from "./DocumentViewer";
 import MediaTypeSelectorModal from "./MediaTypeSelectorModal";
 import GalleryModal from "./GalleryModal";
 
@@ -80,6 +81,21 @@ interface Video {
   caption?: string;
 }
 
+interface Document {
+  id: string;
+  messageId: string;
+  documentUrl: string;
+  fileName: string;
+  mimeType?: string;
+  pageCount?: number;
+  title?: string;
+  caption?: string;
+  timestamp: string;
+  fromMe: boolean;
+  status: string;
+  senderName?: string;
+}
+
 // Tipo para itens vindos da galeria (compatível com GalleryModal)
 type GalleryMediaItem = {
   id: string;
@@ -111,6 +127,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [audios, setAudios] = useState<Audio[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -119,6 +136,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [shouldAutoFocus, setShouldAutoFocus] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   
   // Estados para galeria e seletor de mídia
   const [showMediaTypeSelector, setShowMediaTypeSelector] = useState(false);
@@ -258,6 +276,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         setAudios(data.audios || []);
         setPhotos(data.photos || []);
         setVideos(data.videos || []);
+        setDocuments(data.documents || []);
       }
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
@@ -271,8 +290,72 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     setShowMediaTypeSelector(true);
   };
 
-  const handleMediaTypeSelect = (type: 'photo' | 'video') => {
+  const handleMediaTypeSelect = (type: 'photo' | 'video' | 'document') => {
     setShowMediaTypeSelector(false);
+
+    if (type === 'document') {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar";
+      
+      input.onchange = async (e) => {
+        const files = (e.target as HTMLInputElement).files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        const token = localStorage.getItem("token");
+
+        try {
+          const reader = new FileReader();
+          
+          reader.onload = async () => {
+            try {
+              const base64Full = reader.result as string;
+              
+              await fetch(buildUrl('/dashboard/messages/upload-document'), {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  phone: chat.phone,
+                  document: base64Full,
+                  fileName: file.name,
+                }),
+              });
+
+              toast({
+                title: "Sucesso",
+                description: "Documento enviado com sucesso!",
+              });
+
+              loadMessages();
+            } catch (error) {
+              console.error("Erro ao enviar documento:", error);
+              toast({
+                title: "Erro",
+                description: "Erro ao enviar documento",
+                variant: "destructive",
+              });
+            }
+          };
+
+          reader.readAsDataURL(file);
+        } catch (error) {
+          console.error("Erro:", error);
+          toast({
+            title: "Erro",
+            description: "Erro ao processar documento",
+            variant: "destructive",
+          });
+        }
+      };
+
+      input.click();
+      return;
+    }
+
     setGalleryFilterType(type === 'photo' ? 'photos' : 'videos');
     setShowGalleryModal(true);
   };
@@ -424,12 +507,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     };
   }, []);
 
-  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' }) | (Photo & { type: 'photo' }) | (Video & { type: 'video' })> => {
+  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' }) | (Photo & { type: 'photo' }) | (Video & { type: 'video' }) | (Document & { type: 'document' })> => {
     const combined = [
       ...messages,
       ...audios.map(audio => ({ ...audio, type: 'audio' as const })),
       ...photos.map(photo => ({ ...photo, type: 'photo' as const })),
-      ...videos.map(video => ({ ...video, type: 'video' as const }))
+      ...videos.map(video => ({ ...video, type: 'video' as const })),
+      ...documents.map(doc => ({ ...doc, type: 'document' as const }))
     ];
 
     return combined.sort((a, b) => {
@@ -437,6 +521,16 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       const timeB = new Date(b.timestamp).getTime();
       return timeA - timeB;
     });
+  };
+
+  const handleDocumentDownload = (documentUrl: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = documentUrl;
+    link.download = fileName || 'documento';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const sendMessage = async () => {
@@ -786,10 +880,12 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                 const isAudio = 'type' in item && item.type === 'audio';
                 const isPhoto = 'type' in item && item.type === 'photo';
                 const isVideo = 'type' in item && item.type === 'video';
+                const isDocument = 'type' in item && item.type === 'document';
                 const audio = isAudio ? item as Audio & { type: 'audio' } : null;
                 const photo = isPhoto ? item as Photo & { type: 'photo' } : null;
                 const video = isVideo ? item as Video & { type: 'video' } : null;
-                const message = !isAudio && !isPhoto && !isVideo ? item as Message : null;
+                const document = isDocument ? item as Document & { type: 'document' } : null;
+                const message = !isAudio && !isPhoto && !isVideo && !isDocument ? item as Message : null;
 
                 if (isAudio && audio) {
                   // Renderizar áudio
@@ -1026,6 +1122,76 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                   );
                 }
 
+                if (isDocument && document) {
+                  return (
+                    <div
+                      key={document.messageId}
+                      className={`flex ${document.fromMe ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`group max-w-[70%] rounded-2xl px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity ${
+                          document.fromMe
+                            ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+                            : "bg-white text-gray-900 shadow-sm border border-gray-100"
+                        }`}
+                        onClick={() => handleDocumentDownload(document.documentUrl, document.fileName)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${
+                            document.fromMe ? "bg-white/20" : "bg-green-100"
+                          }`}>
+                            <svg
+                              className={`w-6 h-6 ${document.fromMe ? "text-white" : "text-green-600"}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-medium text-sm truncate ${
+                              document.fromMe ? "text-white" : "text-gray-900"
+                            }`}>
+                              {document.fileName || "Documento"}
+                            </p>
+                            
+                            {document.caption && (
+                              <p className={`text-xs mt-1 ${
+                                document.fromMe ? "text-white/80" : "text-gray-600"
+                              }`}>
+                                {document.caption}
+                              </p>
+                            )}
+                            
+                            <p className={`text-xs mt-1 ${
+                              document.fromMe ? "text-white/60" : "text-gray-500"
+                            }`}>
+                              {document.pageCount ? `${document.pageCount} páginas` : "Clique para baixar"}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-2">
+                          <span
+                            className={`text-[10px] ${
+                              document.fromMe ? "text-white/70" : "text-gray-500"
+                            }`}
+                          >
+                            {formatTime(document.timestamp)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
                 if (message) {
                   // Renderizar mensagem de texto
                   return (
@@ -1225,6 +1391,14 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           video={selectedVideo}
           onClose={() => setSelectedVideo(null)}
           onToggleGallery={toggleVideoInGallery}
+        />
+      )}
+
+
+      {selectedDocument && (
+        <DocumentViewer
+          document={selectedDocument}
+          onClose={() => setSelectedDocument(null)}
         />
       )}
 
