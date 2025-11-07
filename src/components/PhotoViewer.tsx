@@ -16,12 +16,8 @@ interface PhotoViewerProps {
 
 const PhotoViewer = ({ photo, onClose, onToggleGallery }: PhotoViewerProps) => {
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = photo.imageUrl;
-    link.download = `photo-${photo.id}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // ✅ CORREÇÃO: Abrir link em nova aba
+    window.open(photo.imageUrl, '_blank');
   };
 
   return (

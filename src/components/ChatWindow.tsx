@@ -176,13 +176,24 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     setLoadedMediaCount(prev => prev + 1);
   };
 
-  // Calcular total de mídias quando mensagens carregam
+  // ✅ CORREÇÃO BUG THUMBNAILS: Calcular total de mídias quando mensagens carregam
   useEffect(() => {
     const total = photos.length + videos.length;
     setTotalMediaCount(total);
-    setLoadedMediaCount(0);
-    setLoadedMedia(new Set()); // ✅ Resetar mídias carregadas
-    setAllMediaLoaded(total === 0); // Se não há mídias, já está tudo carregado
+    
+    // ✅ NÃO resetar loadedMedia para preservar thumbnails antigas quando nova mídia chega
+    // Só resetar quando mídia é deletada (total diminui)
+    setLoadedMedia(prev => {
+      if (total < prev.size) {
+        // Mídia deletada, limpar Set
+        return new Set();
+      }
+      // Manter mídias já carregadas
+      return prev;
+    });
+    
+    setLoadedMediaCount(prev => total < prev ? 0 : prev);
+    setAllMediaLoaded(total === 0);
   }, [photos.length, videos.length]);
 
   // Verificar se todas as mídias foram carregadas
@@ -1028,7 +1039,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
                           className="relative cursor-pointer w-full bg-gray-200"
-                          style={{ aspectRatio: '16/9', maxWidth: '300px' }}
+                          style={{ aspectRatio: '16/9', maxWidth: '300px', minHeight: '169px' }}
                           onClick={() => setSelectedPhoto(photo)}
                         >
                           {/* ✅ Placeholder enquanto carrega */}
@@ -1139,7 +1150,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
                           className="relative cursor-pointer w-full bg-gray-200"
-                          style={{ aspectRatio: '16/9', maxWidth: '300px' }}
+                          style={{ aspectRatio: '16/9', maxWidth: '300px', minHeight: '169px' }}
                           onClick={() => setSelectedVideo(video)}
                         >
                           {/* ✅ Placeholder enquanto carrega */}
