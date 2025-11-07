@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic, Copy } from "lucide-react";
+import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic, Copy, Trash2 } from "lucide-react";
 import { buildUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import EmojiPicker from "./EmojiPicker";
@@ -715,6 +715,65 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     }
   };
 
+  const handleDeleteMessage = async (messageId: string, messageType: string, fromMe: boolean) => {
+    try {
+      // Confirmar exclusão
+      if (!window.confirm(`Tem certeza que deseja excluir esta ${messageType === 'text' ? 'mensagem' : messageType}?`)) {
+        return;
+      }
+
+      // ✅ SALVAR posição atual do scroll ANTES de deletar
+      const scrollContainer = messagesContainerRef.current;
+      const scrollPosition = scrollContainer?.scrollTop || 0;
+      const scrollHeight = scrollContainer?.scrollHeight || 0;
+
+      const response = await fetch(buildUrl("/dashboard/messages/delete"), {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          messageId: messageId,
+          phone: chat.phone,
+          messageType: messageType,
+          owner: fromMe.toString(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Erro ao excluir mensagem");
+      }
+
+      // ✅ CORRIGIDO: Recarregar mensagens após deletar para evitar bugs
+      await loadMessages();
+
+      // ✅ RESTAURAR posição do scroll após recarregar
+      setTimeout(() => {
+        if (scrollContainer) {
+          const newScrollHeight = scrollContainer.scrollHeight;
+          const heightDifference = scrollHeight - newScrollHeight;
+          const newScrollPosition = Math.max(0, scrollPosition - heightDifference);
+          scrollContainer.scrollTop = newScrollPosition;
+        }
+      }, 100);
+
+      toast({
+        title: "✅ Mensagem excluída",
+        description: "A mensagem foi excluída com sucesso",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir mensagem:", error);
+      toast({
+        title: "❌ Erro ao excluir",
+        description: error instanceof Error ? error.message : "Não foi possível excluir a mensagem",
+        variant: "destructive",
+      });
+    }
+  };
+
   const togglePhotoInGallery = async (photoId: string) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -911,14 +970,39 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                           messageId={audio.messageId}
                         />
                         <div className="flex items-center justify-between mt-1">
-                          <span
-                            className={`text-[10px] ${
-                              audio.fromMe ? "text-white/70" : "text-gray-500"
-                            }`}
-                          >
-                            {formatTime(audio.timestamp)}
-                          </span>
-                        </div>
+                  <span
+                    className={`text-[10px] ${
+                      audio.fromMe ? "text-white/70" : "text-gray-500"
+                    }`}
+                  >
+                    {formatTime(audio.timestamp)}
+                  </span>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-6 w-6 p-0 ${
+                          audio.fromMe 
+                            ? "hover:bg-white/20 text-white" 
+                            : "hover:bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        <MoreVertical className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteMessage(audio.messageId, "audio", audio.fromMe)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                       </div>
                     </div>
                   );
@@ -1019,6 +1103,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 <DropdownMenuItem onClick={() => togglePhotoInGallery(photo.id)}>
                                   {photo.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
                                 </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteMessage(photo.messageId, "photo", photo.fromMe)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Excluir
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -1116,6 +1207,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 <DropdownMenuItem onClick={() => toggleVideoInGallery(video.id)}>
                                   {video.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
                                 </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteMessage(video.messageId, "video", video.fromMe)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Excluir
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -1189,14 +1287,41 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                           </div>
                         )}
                         
-                        <div className="px-4 py-2">
-                          <span
-                            className={`text-[10px] ${
-                              document.fromMe ? "text-white/70" : "text-gray-500"
-                            }`}
-                          >
-                            {formatTime(document.timestamp)}
-                          </span>
+                        <div className={`px-4 py-2 ${document.fromMe ? "text-white" : "text-gray-900"}`}>
+                          <div className="flex items-center justify-between">
+                            <span
+                              className={`text-[10px] ${
+                                document.fromMe ? "text-white/70" : "text-gray-500"
+                              }`}
+                            >
+                              {formatTime(document.timestamp)}
+                            </span>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-6 w-6 p-0 ${
+                                    document.fromMe 
+                                      ? "hover:bg-white/20 text-white" 
+                                      : "hover:bg-gray-100 text-gray-600"
+                                  }`}
+                                >
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteMessage(document.messageId, "document", document.fromMe)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1315,6 +1440,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                         Editar mensagem
                                       </DropdownMenuItem>
                                     )}
+                                    <DropdownMenuItem
+                                      onClick={() => handleDeleteMessage(message.messageId, "text", message.fromMe)}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-2" />
+                                      Excluir
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               )}
