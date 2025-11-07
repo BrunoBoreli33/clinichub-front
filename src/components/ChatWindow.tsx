@@ -312,6 +312,9 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
             try {
               const base64Full = reader.result as string;
               
+              // ✅ Prevenir scroll automático durante upload de documento
+              setPreventAutoScroll(true);
+              
               await fetch(buildUrl('/dashboard/messages/upload-document'), {
                 method: "POST",
                 headers: {
@@ -325,14 +328,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                 }),
               });
 
-              toast({
-                title: "Sucesso",
-                description: "Documento enviado com sucesso!",
-              });
-
-              loadMessages();
+              // ✅ Aguardar antes de desativar preventAutoScroll
+              setTimeout(() => {
+                setPreventAutoScroll(false);
+              }, 1000);
             } catch (error) {
               console.error("Erro ao enviar documento:", error);
+              setPreventAutoScroll(false); // ✅ Resetar flag em caso de erro
               toast({
                 title: "Erro",
                 description: "Erro ao enviar documento",
@@ -344,6 +346,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           reader.readAsDataURL(file);
         } catch (error) {
           console.error("Erro:", error);
+          setPreventAutoScroll(false); // ✅ Resetar flag em caso de erro
           toast({
             title: "Erro",
             description: "Erro ao processar documento",
@@ -1129,13 +1132,15 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                       className={`flex ${document.fromMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`group max-w-[70%] rounded-2xl px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity ${
+                        className={`group max-w-[70%] rounded-2xl overflow-hidden ${
                           document.fromMe
                             ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
-                        }`}
-                        onClick={() => handleDocumentDownload(document.documentUrl, document.fileName)}
-                      >
+                        }`}>
+                        <div 
+                          className="px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => handleDocumentDownload(document.documentUrl, document.fileName)}
+                        >
                         <div className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg ${
                             document.fromMe ? "bg-white/20" : "bg-green-100"
@@ -1162,14 +1167,6 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                               {document.fileName || "Documento"}
                             </p>
                             
-                            {document.caption && (
-                              <p className={`text-xs mt-1 ${
-                                document.fromMe ? "text-white/80" : "text-gray-600"
-                              }`}>
-                                {document.caption}
-                              </p>
-                            )}
-                            
                             <p className={`text-xs mt-1 ${
                               document.fromMe ? "text-white/60" : "text-gray-500"
                             }`}>
@@ -1177,8 +1174,22 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             </p>
                           </div>
                         </div>
+                        </div>
+
+                        {/* Caption do documento - Similar ao WhatsApp */}
+                        {document.caption && document.caption.trim() !== "" && (
+                          <div className={`px-4 py-2 border-t ${
+                            document.fromMe ? "border-white/20" : "border-gray-200"
+                          }`}>
+                            <p className={`text-sm break-words ${
+                              document.fromMe ? "text-white" : "text-gray-900"
+                            }`}>
+                              {document.caption}
+                            </p>
+                          </div>
+                        )}
                         
-                        <div className="flex items-center justify-between mt-2">
+                        <div className="px-4 py-2">
                           <span
                             className={`text-[10px] ${
                               document.fromMe ? "text-white/70" : "text-gray-500"
