@@ -17,12 +17,8 @@ interface VideoViewerProps {
 
 const VideoViewer = ({ video, onClose, onToggleGallery }: VideoViewerProps) => {
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = video.videoUrl;
-    link.download = `video-${video.id}.mp4`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // ✅ CORREÇÃO: Abrir link em nova aba
+    window.open(video.videoUrl, '_blank');
   };
 
   return (

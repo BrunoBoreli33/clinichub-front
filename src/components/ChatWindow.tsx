@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic, Copy } from "lucide-react";
+import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic, Copy, Trash2 } from "lucide-react";
 import { buildUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import EmojiPicker from "./EmojiPicker";
@@ -13,6 +13,7 @@ import AudioRecorder from "./AudioRecorder";
 import AudioPlayer from "./AudioPlayer";
 import PhotoViewer from "./PhotoViewer";
 import VideoViewer from "./VideoViewer";
+import DocumentViewer from "./DocumentViewer";
 import MediaTypeSelectorModal from "./MediaTypeSelectorModal";
 import GalleryModal from "./GalleryModal";
 
@@ -80,6 +81,21 @@ interface Video {
   caption?: string;
 }
 
+interface Document {
+  id: string;
+  messageId: string;
+  documentUrl: string;
+  fileName: string;
+  mimeType?: string;
+  pageCount?: number;
+  title?: string;
+  caption?: string;
+  timestamp: string;
+  fromMe: boolean;
+  status: string;
+  senderName?: string;
+}
+
 // Tipo para itens vindos da galeria (compatível com GalleryModal)
 type GalleryMediaItem = {
   id: string;
@@ -111,6 +127,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [audios, setAudios] = useState<Audio[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -119,6 +136,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [shouldAutoFocus, setShouldAutoFocus] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   
   // Estados para galeria e seletor de mídia
   const [showMediaTypeSelector, setShowMediaTypeSelector] = useState(false);
@@ -158,13 +176,24 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     setLoadedMediaCount(prev => prev + 1);
   };
 
-  // Calcular total de mídias quando mensagens carregam
+  // ✅ CORREÇÃO BUG THUMBNAILS: Calcular total de mídias quando mensagens carregam
   useEffect(() => {
     const total = photos.length + videos.length;
     setTotalMediaCount(total);
-    setLoadedMediaCount(0);
-    setLoadedMedia(new Set()); // ✅ Resetar mídias carregadas
-    setAllMediaLoaded(total === 0); // Se não há mídias, já está tudo carregado
+    
+    // ✅ NÃO resetar loadedMedia para preservar thumbnails antigas quando nova mídia chega
+    // Só resetar quando mídia é deletada (total diminui)
+    setLoadedMedia(prev => {
+      if (total < prev.size) {
+        // Mídia deletada, limpar Set
+        return new Set();
+      }
+      // Manter mídias já carregadas
+      return prev;
+    });
+    
+    setLoadedMediaCount(prev => total < prev ? 0 : prev);
+    setAllMediaLoaded(total === 0);
   }, [photos.length, videos.length]);
 
   // Verificar se todas as mídias foram carregadas
@@ -258,6 +287,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         setAudios(data.audios || []);
         setPhotos(data.photos || []);
         setVideos(data.videos || []);
+        setDocuments(data.documents || []);
       }
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
@@ -271,8 +301,75 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     setShowMediaTypeSelector(true);
   };
 
-  const handleMediaTypeSelect = (type: 'photo' | 'video') => {
+  const handleMediaTypeSelect = (type: 'photo' | 'video' | 'document') => {
     setShowMediaTypeSelector(false);
+
+    if (type === 'document') {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar";
+      
+      input.onchange = async (e) => {
+        const files = (e.target as HTMLInputElement).files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        const token = localStorage.getItem("token");
+
+        try {
+          const reader = new FileReader();
+          
+          reader.onload = async () => {
+            try {
+              const base64Full = reader.result as string;
+              
+              // ✅ Prevenir scroll automático durante upload de documento
+              setPreventAutoScroll(true);
+              
+              await fetch(buildUrl('/dashboard/messages/upload-document'), {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  phone: chat.phone,
+                  document: base64Full,
+                  fileName: file.name,
+                }),
+              });
+
+              // ✅ Aguardar antes de desativar preventAutoScroll
+              setTimeout(() => {
+                setPreventAutoScroll(false);
+              }, 1000);
+            } catch (error) {
+              console.error("Erro ao enviar documento:", error);
+              setPreventAutoScroll(false); // ✅ Resetar flag em caso de erro
+              toast({
+                title: "Erro",
+                description: "Erro ao enviar documento",
+                variant: "destructive",
+              });
+            }
+          };
+
+          reader.readAsDataURL(file);
+        } catch (error) {
+          console.error("Erro:", error);
+          setPreventAutoScroll(false); // ✅ Resetar flag em caso de erro
+          toast({
+            title: "Erro",
+            description: "Erro ao processar documento",
+            variant: "destructive",
+          });
+        }
+      };
+
+      input.click();
+      return;
+    }
+
     setGalleryFilterType(type === 'photo' ? 'photos' : 'videos');
     setShowGalleryModal(true);
   };
@@ -424,12 +521,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     };
   }, []);
 
-  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' }) | (Photo & { type: 'photo' }) | (Video & { type: 'video' })> => {
+  const getCombinedMessages = (): Array<Message | (Audio & { type: 'audio' }) | (Photo & { type: 'photo' }) | (Video & { type: 'video' }) | (Document & { type: 'document' })> => {
     const combined = [
       ...messages,
       ...audios.map(audio => ({ ...audio, type: 'audio' as const })),
       ...photos.map(photo => ({ ...photo, type: 'photo' as const })),
-      ...videos.map(video => ({ ...video, type: 'video' as const }))
+      ...videos.map(video => ({ ...video, type: 'video' as const })),
+      ...documents.map(doc => ({ ...doc, type: 'document' as const }))
     ];
 
     return combined.sort((a, b) => {
@@ -437,6 +535,16 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       const timeB = new Date(b.timestamp).getTime();
       return timeA - timeB;
     });
+  };
+
+  const handleDocumentDownload = (documentUrl: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = documentUrl;
+    link.download = fileName || 'documento';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const sendMessage = async () => {
@@ -618,6 +726,65 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     }
   };
 
+  const handleDeleteMessage = async (messageId: string, messageType: string, fromMe: boolean) => {
+    try {
+      // Confirmar exclusão
+      if (!window.confirm(`Tem certeza que deseja excluir esta ${messageType === 'text' ? 'mensagem' : messageType}?`)) {
+        return;
+      }
+
+      // ✅ SALVAR posição atual do scroll ANTES de deletar
+      const scrollContainer = messagesContainerRef.current;
+      const scrollPosition = scrollContainer?.scrollTop || 0;
+      const scrollHeight = scrollContainer?.scrollHeight || 0;
+
+      const response = await fetch(buildUrl("/dashboard/messages/delete"), {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          messageId: messageId,
+          phone: chat.phone,
+          messageType: messageType,
+          owner: fromMe.toString(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Erro ao excluir mensagem");
+      }
+
+      // ✅ CORRIGIDO: Recarregar mensagens após deletar para evitar bugs
+      await loadMessages();
+
+      // ✅ RESTAURAR posição do scroll após recarregar
+      setTimeout(() => {
+        if (scrollContainer) {
+          const newScrollHeight = scrollContainer.scrollHeight;
+          const heightDifference = scrollHeight - newScrollHeight;
+          const newScrollPosition = Math.max(0, scrollPosition - heightDifference);
+          scrollContainer.scrollTop = newScrollPosition;
+        }
+      }, 100);
+
+      toast({
+        title: "✅ Mensagem excluída",
+        description: "A mensagem foi excluída com sucesso",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir mensagem:", error);
+      toast({
+        title: "❌ Erro ao excluir",
+        description: error instanceof Error ? error.message : "Não foi possível excluir a mensagem",
+        variant: "destructive",
+      });
+    }
+  };
+
   const togglePhotoInGallery = async (photoId: string) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -786,10 +953,12 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                 const isAudio = 'type' in item && item.type === 'audio';
                 const isPhoto = 'type' in item && item.type === 'photo';
                 const isVideo = 'type' in item && item.type === 'video';
+                const isDocument = 'type' in item && item.type === 'document';
                 const audio = isAudio ? item as Audio & { type: 'audio' } : null;
                 const photo = isPhoto ? item as Photo & { type: 'photo' } : null;
                 const video = isVideo ? item as Video & { type: 'video' } : null;
-                const message = !isAudio && !isPhoto && !isVideo ? item as Message : null;
+                const document = isDocument ? item as Document & { type: 'document' } : null;
+                const message = !isAudio && !isPhoto && !isVideo && !isDocument ? item as Message : null;
 
                 if (isAudio && audio) {
                   // Renderizar áudio
@@ -812,14 +981,39 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                           messageId={audio.messageId}
                         />
                         <div className="flex items-center justify-between mt-1">
-                          <span
-                            className={`text-[10px] ${
-                              audio.fromMe ? "text-white/70" : "text-gray-500"
-                            }`}
-                          >
-                            {formatTime(audio.timestamp)}
-                          </span>
-                        </div>
+                  <span
+                    className={`text-[10px] ${
+                      audio.fromMe ? "text-white/70" : "text-gray-500"
+                    }`}
+                  >
+                    {formatTime(audio.timestamp)}
+                  </span>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-6 w-6 p-0 ${
+                          audio.fromMe 
+                            ? "hover:bg-white/20 text-white" 
+                            : "hover:bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        <MoreVertical className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteMessage(audio.messageId, "audio", audio.fromMe)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                       </div>
                     </div>
                   );
@@ -845,7 +1039,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
                           className="relative cursor-pointer w-full bg-gray-200"
-                          style={{ aspectRatio: '16/9', maxWidth: '300px' }}
+                          style={{ aspectRatio: '16/9', maxWidth: '300px', minHeight: '169px' }}
                           onClick={() => setSelectedPhoto(photo)}
                         >
                           {/* ✅ Placeholder enquanto carrega */}
@@ -920,6 +1114,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 <DropdownMenuItem onClick={() => togglePhotoInGallery(photo.id)}>
                                   {photo.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
                                 </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteMessage(photo.messageId, "photo", photo.fromMe)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Excluir
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -949,7 +1150,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
                           className="relative cursor-pointer w-full bg-gray-200"
-                          style={{ aspectRatio: '16/9', maxWidth: '300px' }}
+                          style={{ aspectRatio: '16/9', maxWidth: '300px', minHeight: '169px' }}
                           onClick={() => setSelectedVideo(video)}
                         >
                           {/* ✅ Placeholder enquanto carrega */}
@@ -1016,6 +1217,118 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => toggleVideoInGallery(video.id)}>
                                   {video.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteMessage(video.messageId, "video", video.fromMe)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isDocument && document) {
+                  return (
+                    <div
+                      key={document.messageId}
+                      className={`flex ${document.fromMe ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`group max-w-[70%] rounded-2xl overflow-hidden ${
+                          document.fromMe
+                            ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+                            : "bg-white text-gray-900 shadow-sm border border-gray-100"
+                        }`}>
+                        <div 
+                          className="px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => handleDocumentDownload(document.documentUrl, document.fileName)}
+                        >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${
+                            document.fromMe ? "bg-white/20" : "bg-green-100"
+                          }`}>
+                            <svg
+                              className={`w-6 h-6 ${document.fromMe ? "text-white" : "text-green-600"}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-medium text-sm truncate ${
+                              document.fromMe ? "text-white" : "text-gray-900"
+                            }`}>
+                              {document.fileName || "Documento"}
+                            </p>
+                            
+                            <p className={`text-xs mt-1 ${
+                              document.fromMe ? "text-white/60" : "text-gray-500"
+                            }`}>
+                              {document.pageCount ? `${document.pageCount} páginas` : "Clique para baixar"}
+                            </p>
+                          </div>
+                        </div>
+                        </div>
+
+                        {/* Caption do documento - Similar ao WhatsApp */}
+                        {document.caption && document.caption.trim() !== "" && (
+                          <div className={`px-4 py-2 border-t ${
+                            document.fromMe ? "border-white/20" : "border-gray-200"
+                          }`}>
+                            <p className={`text-sm break-words ${
+                              document.fromMe ? "text-white" : "text-gray-900"
+                            }`}>
+                              {document.caption}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className={`px-4 py-2 ${document.fromMe ? "text-white" : "text-gray-900"}`}>
+                          <div className="flex items-center justify-between">
+                            <span
+                              className={`text-[10px] ${
+                                document.fromMe ? "text-white/70" : "text-gray-500"
+                              }`}
+                            >
+                              {formatTime(document.timestamp)}
+                            </span>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-6 w-6 p-0 ${
+                                    document.fromMe 
+                                      ? "hover:bg-white/20 text-white" 
+                                      : "hover:bg-gray-100 text-gray-600"
+                                  }`}
+                                >
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteMessage(document.messageId, "document", document.fromMe)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Excluir
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -1138,6 +1451,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                         Editar mensagem
                                       </DropdownMenuItem>
                                     )}
+                                    <DropdownMenuItem
+                                      onClick={() => handleDeleteMessage(message.messageId, "text", message.fromMe)}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-2" />
+                                      Excluir
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               )}
@@ -1225,6 +1545,14 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           video={selectedVideo}
           onClose={() => setSelectedVideo(null)}
           onToggleGallery={toggleVideoInGallery}
+        />
+      )}
+
+
+      {selectedDocument && (
+        <DocumentViewer
+          document={selectedDocument}
+          onClose={() => setSelectedDocument(null)}
         />
       )}
 
