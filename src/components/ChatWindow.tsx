@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic, Copy, Trash2 } from "lucide-react";
+import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic, Copy, Trash2, Reply } from "lucide-react";
 import { buildUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import EmojiPicker from "./EmojiPicker";
@@ -16,6 +16,8 @@ import VideoViewer from "./VideoViewer";
 import DocumentViewer from "./DocumentViewer";
 import MediaTypeSelectorModal from "./MediaTypeSelectorModal";
 import GalleryModal from "./GalleryModal";
+import ReplyIndicator from "./ReplyIndicator";
+import MessageReplySimple from "./MessageReplySimple";
 
 interface Tag {
   id: string;
@@ -96,6 +98,21 @@ interface Document {
   senderName?: string;
 }
 
+interface ReplyData {
+  id: string;
+  messageId: string;
+  referenceMessageId: string;
+  content?: string;
+  audioUrl?: string;
+  documentUrl?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  replyType: string;
+  fromMe: boolean;
+  timestamp: string;
+}
+
+
 // Tipo para itens vindos da galeria (compatível com GalleryModal)
 type GalleryMediaItem = {
   id: string;
@@ -128,6 +145,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [replies, setReplies] = useState<ReplyData[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -154,6 +172,19 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   // ✅ Estado para controlar scroll durante edição
   const [preventAutoScroll, setPreventAutoScroll] = useState(false);
   
+  
+  // ✅ NOVO: Estado para Reply
+  const [replyTo, setReplyTo] = useState<{
+    messageId: string;
+    content?: string;
+    type: 'text' | 'audio' | 'image' | 'video' | 'document';
+    senderName?: string;
+    imageUrl?: string;
+    audioUrl?: string;
+    videoUrl?: string;
+    documentUrl?: string;
+    fileName?: string;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -278,6 +309,8 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         setAudios([]);
         setPhotos([]);
         setVideos([]);
+        setDocuments([]);
+        setReplies([]); // âœ… ADICIONAR ESTA LINHA
         return;
       }
 
@@ -288,6 +321,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         setPhotos(data.photos || []);
         setVideos(data.videos || []);
         setDocuments(data.documents || []);
+        setReplies(data.replies || []);
       }
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
@@ -547,6 +581,29 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     document.body.removeChild(link);
   };
 
+
+  // ✅ NOVO: Função para iniciar reply
+  const startReply = (
+    item: Message | Audio | Photo | Video | Document, 
+    type: 'text' | 'audio' | 'image' | 'video' | 'document'
+  ) => {
+    setReplyTo({
+      messageId: item.messageId,
+      content: 'content' in item ? item.content : ('caption' in item ? item.caption : undefined),
+      type,
+      senderName: item.senderName,
+      imageUrl: 'imageUrl' in item ? item.imageUrl : undefined,
+      audioUrl: 'audioUrl' in item ? item.audioUrl : undefined,
+      videoUrl: 'videoUrl' in item ? item.videoUrl : undefined,
+      documentUrl: 'documentUrl' in item ? item.documentUrl : undefined,
+      fileName: 'fileName' in item ? item.fileName : undefined
+    });
+    
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;
 
@@ -556,22 +613,34 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     setNewMessage("");
 
     try {
-      const response = await fetch(buildUrl('/dashboard/messages/send'), {
+      const endpoint = replyTo 
+        ? `/dashboard/messages/reply/${chat.id}`
+        : '/dashboard/messages/send';
+      
+      const body = replyTo
+        ? {
+            content: messageText,
+            referenceMessageId: replyTo.messageId
+          }
+        : {
+            chatId: chat.id,
+            phone: chat.phone,
+            message: messageText,
+          };
+
+      const response = await fetch(buildUrl(endpoint), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          chatId: chat.id,
-          phone: chat.phone,
-          message: messageText,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
       if (data.success) {
         console.log("✅ Mensagem enviada com sucesso");
+        setReplyTo(null); // Limpar reply após enviar
         loadMessages(true);
       } else {
         console.error("❌ Erro ao enviar mensagem:", data.message);
@@ -974,6 +1043,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
                         }`}
                       >
+                        <MessageReplySimple messageId={audio.messageId} replies={replies} />
                         <AudioPlayer
                           audioUrl={audio.audioUrl}
                           duration={audio.seconds}
@@ -1004,6 +1074,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => startReply(audio, 'audio')}>
+                        <Reply className="h-4 w-4 mr-2" />
+                        Responder
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDeleteMessage(audio.messageId, "audio", audio.fromMe)}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1036,6 +1110,9 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white shadow-sm border border-gray-100"
                         }`}
                       >
+                        <div className="px-3 pt-2">
+                          <MessageReplySimple messageId={photo.messageId} replies={replies} />
+                        </div>
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
                           className="relative cursor-pointer w-full bg-gray-200"
@@ -1111,6 +1188,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => startReply(photo, 'image')}>
+                                  <Reply className="h-4 w-4 mr-2" />
+                                  Responder
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => togglePhotoInGallery(photo.id)}>
                                   {photo.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
                                 </DropdownMenuItem>
@@ -1147,6 +1228,9 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white shadow-sm border border-gray-100"
                         }`}
                       >
+                        <div className="px-3 pt-2">
+                          <MessageReplySimple messageId={video.messageId} replies={replies} />
+                        </div>
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
                           className="relative cursor-pointer w-full bg-gray-200"
@@ -1215,6 +1299,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => startReply(video, 'video')}>
+                                  <Reply className="h-4 w-4 mr-2" />
+                                  Responder
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => toggleVideoInGallery(video.id)}>
                                   {video.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
                                 </DropdownMenuItem>
@@ -1246,6 +1334,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
                         }`}>
+                        <MessageReplySimple messageId={document.messageId} replies={replies} />
                         <div 
                           className="px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => handleDocumentDownload(document.documentUrl, document.fileName)}
@@ -1323,6 +1412,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => startReply(document, 'document')}>
+                                  <Reply className="h-4 w-4 mr-2" />
+                                  Responder
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleDeleteMessage(document.messageId, "document", document.fromMe)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1354,6 +1447,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
                         }`}
                       >
+                        <MessageReplySimple messageId={message.messageId} replies={replies} />
                         {message.type === "audio" ? (
                           <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-3">
@@ -1441,6 +1535,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => startReply(message, 'text')}>
+                                      <Reply className="h-3 w-3 mr-2" />
+                                      Responder
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => copyMessage(message.content)}>
                                       <Copy className="h-3 w-3 mr-2" />
                                       Copiar
@@ -1476,6 +1574,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           </div>
 
           <div className="p-4 bg-white border-t border-gray-100">
+            {replyTo && (
+              <ReplyIndicator 
+                replyTo={replyTo}
+                onCancel={() => setReplyTo(null)}
+              />
+            )}
+            
             <div className="flex items-center gap-2">
               <EmojiPicker onEmojiSelect={handleEmojiSelect} />
               <PreConfiguredTextsPicker onSelectText={handlePreConfiguredTextSelect} />

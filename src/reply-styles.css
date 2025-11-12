@@ -1,0 +1,167 @@
+/* reply-styles.css */
+/* Estilos para a funcionalidade de Reply */
+
+/* Animação de entrada do indicador de reply */
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.2s ease-out;
+}
+
+/* Container do indicador de reply */
+.reply-indicator {
+  background: linear-gradient(to right, #f3f4f6, #ffffff);
+  border-left: 4px solid #3b82f6;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Preview de reply nas mensagens */
+.reply-preview {
+  background-color: rgba(59, 130, 246, 0.05);
+  padding: 6px 10px;
+  border-left: 2px solid #3b82f6;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 2px;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.reply-preview:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  cursor: pointer;
+}
+
+/* Ícone de reply */
+.reply-icon {
+  color: #3b82f6;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+
+/* Botão de cancelar reply */
+.reply-cancel-btn {
+  padding: 4px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reply-cancel-btn:hover {
+  background-color: #e5e7eb;
+}
+
+/* Container de mensagem com reply */
+.message-with-reply {
+  position: relative;
+}
+
+.message-with-reply .reply-content {
+  background-color: #f9fafb;
+  border-left: 2px solid #9ca3af;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #6b7280;
+  display: inline-block;
+  max-width: 80%;
+  word-break: break-word;
+}
+
+/* Media preview em replies */
+.reply-media-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reply-media-preview img {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.reply-media-preview .media-icon {
+  width: 32px;
+  height: 32px;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .reply-indicator {
+    background: linear-gradient(to right, #1f2937, #111827);
+    border-left-color: #60a5fa;
+  }
+  
+  .reply-preview {
+    background-color: rgba(96, 165, 250, 0.1);
+    border-left-color: #60a5fa;
+    color: #9ca3af;
+  }
+  
+  .reply-preview:hover {
+    background-color: rgba(96, 165, 250, 0.15);
+  }
+  
+  .reply-icon {
+    color: #60a5fa;
+  }
+  
+  .reply-cancel-btn:hover {
+    background-color: #374151;
+  }
+  
+  .message-with-reply .reply-content {
+    background-color: #1f2937;
+    border-left-color: #4b5563;
+    color: #9ca3af;
+  }
+  
+  .reply-media-preview .media-icon {
+    background-color: #374151;
+    color: #9ca3af;
+  }
+}
+
+/* Responsividade */
+@media (max-width: 640px) {
+  .reply-indicator {
+    padding: 6px 8px;
+    font-size: 0.875rem;
+  }
+  
+  .reply-preview {
+    font-size: 0.75rem;
+    padding: 4px 6px;
+  }
+  
+  .message-with-reply .reply-content {
+    max-width: 90%;
+  }
+}
