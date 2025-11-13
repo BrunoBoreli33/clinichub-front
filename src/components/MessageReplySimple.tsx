@@ -17,6 +17,7 @@ interface MessageReplySimpleProps {
     replyType: string;
     fromMe: boolean;
     timestamp: string;
+    originalMessageNotFound?: boolean;
   }>;
 }
 
@@ -28,7 +29,27 @@ const MessageReplySimple: React.FC<MessageReplySimpleProps> = ({ messageId, repl
     return null;
   }
 
+  // ✅ Verificar se a mensagem original não foi encontrada
+  const isNotFound = reply.originalMessageNotFound === true;
+
   const renderReplyPreview = () => {
+    // ✅ Se a mensagem não foi encontrada, mostrar layout especial
+    if (isNotFound) {
+      return (
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <Reply className="h-3 w-3 text-blue-500 flex-shrink-0" />
+            <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+              {reply.senderName || 'Contato'}
+            </span>
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 italic ml-4">
+            Mensagem não encontrada
+          </div>
+        </div>
+      );
+    }
+
     switch (reply.replyType) {
       case 'text':
         return (

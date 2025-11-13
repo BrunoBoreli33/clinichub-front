@@ -102,6 +102,9 @@ interface ReplyData {
   id: string;
   messageId: string;
   referenceMessageId: string;
+  messageContent?: string;
+  mensagemEnviada?: string;
+  senderName?: string;
   content?: string;
   audioUrl?: string;
   documentUrl?: string;
@@ -110,6 +113,7 @@ interface ReplyData {
   replyType: string;
   fromMe: boolean;
   timestamp: string;
+  original_message_not_found?: boolean;
 }
 
 

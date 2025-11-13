@@ -238,7 +238,18 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   };
 
   const handleMoveFromDropdown = (chatId: string, toColumnId: string) => {
-    // ✅ Bloqueia movimentação de chats na coluna "repescagem"
+    // ✅ NOVO: Verificar se é chat temporário
+    const chat = chats[id]?.find(c => c.id === chatId);
+    
+    if (chat && chat.phone && chat.phone.includes('@lid')) {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "Chats temporários (com @lid) não podem ser movidos manualmente. Aguarde o número ser revelado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (id === "repescagem") {
       showToast?.({
         message: "Movimentação bloqueada",
@@ -956,6 +967,17 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
     const fromColumn = source.droppableId;
     const toColumn = destination.droppableId;
     const chatId = draggableId;
+    // ✅ NOVO: Verificar se é chat temporário antes de permitir arrastar
+    const chat = chats[fromColumn]?.find(c => c.id === chatId);
+    
+    if (chat && chat.phone && chat.phone.includes('@lid')) {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "Chats temporários (com @lid) não podem ser movidos manualmente. Aguarde o número ser revelado.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (fromColumn === "repescagem") {
       showToast?.({
