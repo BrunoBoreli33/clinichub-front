@@ -198,6 +198,9 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   
   // ✅ Ref para a mensagem sendo editada
   const editingMessageRef = useRef<HTMLDivElement | null>(null);
+  
+  // ✅ Ref para rastrear todas as mensagens para scroll
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const { toast } = useToast();
 
@@ -608,23 +611,60 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     }
   };
 
+  // ✅ NOVO: Função para scroll para mensagem referenciada
+  const scrollToMessage = (referenceMessageId: string) => {
+    console.log('🎯 Tentando scroll para mensagem:', referenceMessageId);
+    
+    // Verificar se a mensagem existe no banco de dados
+    const messageExists = getCombinedMessages().some(item => {
+      return item.messageId === referenceMessageId;
+    });
+
+    if (!messageExists) {
+      console.log('⚠️ Mensagem não encontrada no banco de dados:', referenceMessageId);
+      return; // Não fazer scroll se mensagem não existe
+    }
+
+    // Buscar a referência do elemento
+    const targetElement = messageRefs.current[referenceMessageId];
+    
+    if (targetElement && messagesContainerRef.current) {
+      console.log('✅ Elemento encontrado, fazendo scroll');
+      
+      // Fazer scroll suave
+      targetElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+
+      // Adicionar animação de destaque temporária
+      targetElement.classList.add('bg-yellow-100', 'dark:bg-yellow-900');
+      setTimeout(() => {
+        targetElement.classList.remove('bg-yellow-100', 'dark:bg-yellow-900');
+      }, 2000);
+    } else {
+      console.log('❌ Elemento não encontrado na DOM:', referenceMessageId);
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
     const token = localStorage.getItem("token");
     const messageText = newMessage;
+    const replyToCache = replyTo; // ✅ CORREÇÃO: Cache do estado de reply
     setNewMessage("");
 
     try {
-      const endpoint = replyTo 
+      const endpoint = replyToCache 
         ? `/dashboard/messages/reply/${chat.id}`
         : '/dashboard/messages/send';
       
-      const body = replyTo
+      const body = replyToCache
         ? {
             content: messageText,
-            referenceMessageId: replyTo.messageId
+            referenceMessageId: replyToCache.messageId
           }
         : {
             chatId: chat.id,
@@ -649,10 +689,12 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
       } else {
         console.error("❌ Erro ao enviar mensagem:", data.message);
         setNewMessage(messageText);
+        setReplyTo(replyToCache); // ✅ CORREÇÃO: Restaurar reply em caso de erro
       }
     } catch (error) {
       console.error("❌ Erro ao enviar mensagem:", error);
       setNewMessage(messageText);
+      setReplyTo(replyToCache); // ✅ CORREÇÃO: Restaurar reply em caso de erro
     } finally {
       setSending(false);
     }
@@ -1038,6 +1080,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                   return (
                     <div
                       key={audio.messageId}
+                      ref={(el) => { messageRefs.current[audio.messageId] = el; }}
                       className={`flex ${audio.fromMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
@@ -1047,7 +1090,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
                         }`}
                       >
-                        <MessageReplySimple messageId={audio.messageId} replies={replies} />
+                        <MessageReplySimple messageId={audio.messageId} replies={replies} onReplyClick={scrollToMessage} />
                         <AudioPlayer
                           audioUrl={audio.audioUrl}
                           duration={audio.seconds}
@@ -1105,6 +1148,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                   return (
                     <div
                       key={photo.messageId}
+                      ref={(el) => { messageRefs.current[photo.messageId] = el; }}
                       className={`flex ${photo.fromMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
@@ -1115,7 +1159,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                         }`}
                       >
                         <div className="px-3 pt-2">
-                          <MessageReplySimple messageId={photo.messageId} replies={replies} />
+                          <MessageReplySimple messageId={photo.messageId} replies={replies} onReplyClick={scrollToMessage} />
                         </div>
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
@@ -1223,6 +1267,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                   return (
                     <div
                       key={video.messageId}
+                      ref={(el) => { messageRefs.current[video.messageId] = el; }}
                       className={`flex ${video.fromMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
@@ -1233,7 +1278,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                         }`}
                       >
                         <div className="px-3 pt-2">
-                          <MessageReplySimple messageId={video.messageId} replies={replies} />
+                          <MessageReplySimple messageId={video.messageId} replies={replies} onReplyClick={scrollToMessage} />
                         </div>
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
@@ -1330,6 +1375,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                   return (
                     <div
                       key={document.messageId}
+                      ref={(el) => { messageRefs.current[document.messageId] = el; }}
                       className={`flex ${document.fromMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
@@ -1338,7 +1384,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
                         }`}>
-                        <MessageReplySimple messageId={document.messageId} replies={replies} />
+                        <MessageReplySimple messageId={document.messageId} replies={replies} onReplyClick={scrollToMessage} />
                         <div 
                           className="px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => handleDocumentDownload(document.documentUrl, document.fileName)}
@@ -1442,7 +1488,12 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                     <div
                       key={message.messageId}
                       className={`flex ${message.fromMe ? "justify-end" : "justify-start"}`}
-                      ref={editingMessageId === message.messageId ? editingMessageRef : null}
+                      ref={(el) => {
+                        messageRefs.current[message.messageId] = el;
+                        if (editingMessageId === message.messageId) {
+                          editingMessageRef.current = el;
+                        }
+                      }}
                     >
                       <div
                         className={`group max-w-[70%] rounded-2xl px-4 py-2 ${
@@ -1451,7 +1502,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
                         }`}
                       >
-                        <MessageReplySimple messageId={message.messageId} replies={replies} />
+                        <MessageReplySimple messageId={message.messageId} replies={replies} onReplyClick={scrollToMessage} />
                         {message.type === "audio" ? (
                           <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-3">

@@ -173,9 +173,11 @@ interface ChatColumnProps {
   toggleHideUploadChat: () => void;
   showHiddenChats: boolean;
   toggleShowHiddenChats: () => void;
+  hideTemporaryChats: boolean;
+  toggleHideTemporaryChats: () => void;
 }
 
-const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, onChatClosed, showToast, hideUploadChat, toggleHideUploadChat, showHiddenChats, toggleShowHiddenChats }: ChatColumnProps) => {
+const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, onChatClosed, showToast, hideUploadChat, toggleHideUploadChat, showHiddenChats, toggleShowHiddenChats, hideTemporaryChats, toggleHideTemporaryChats }: ChatColumnProps) => {
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
     const saved = localStorage.getItem(`column-${id}-sortOrder`);
     return (saved as "recent" | "oldest") || "recent";
@@ -218,6 +220,12 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     return chat.phone.includes("newsletter") || chat.phone.length > 20;
   };
 
+  const isTemporaryChat = (chat: Chat) => {
+    if (!chat.phone) return false;
+    return chat.phone.includes('@lid') || chat.phone.length > 13;
+  };
+
+
   const truncateMessage = (message: string | null, maxLength: number = 40) => {
     if (!message) return "Sem mensagens";
     if (message.length <= maxLength) return message;
@@ -228,6 +236,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     if (!showGroups && chat.isGroup) return false;
     if (!showNewsletters && isNewsletter(chat)) return false;
     if (!showHiddenChats && chat.isHidden) return false;
+    if (hideTemporaryChats && isTemporaryChat(chat)) return false;
     return true;
   });
 
@@ -462,30 +471,6 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
                     
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger className="text-xs">
-                        Chat de Upload
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuItem 
-                          className="text-xs"
-                          onClick={() => {
-                            if (hideUploadChat) toggleHideUploadChat();
-                          }}
-                        >
-                          {!hideUploadChat && "✓ "}Mostrar chat de upload
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-xs"
-                          onClick={() => {
-                            if (!hideUploadChat) toggleHideUploadChat();
-                          }}
-                        >
-                          {hideUploadChat && "✓ "}Ocultar chat de upload
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 
@@ -509,6 +494,29 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                       }}
                     >
                       {!showHiddenChats && "✓ "}Esconder chats ocultos
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-xs">
+                    Ocultar @lid
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem 
+                      className="text-xs"
+                      onClick={() => {
+                        if (!hideTemporaryChats) toggleHideTemporaryChats();
+                      }}
+                    >
+                      {hideTemporaryChats && "✓ "}Ocultar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="text-xs"
+                      onClick={() => {
+                        if (hideTemporaryChats) toggleHideTemporaryChats();
+                      }}
+                    >
+                      {!hideTemporaryChats && "✓ "}Mostrar
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
@@ -762,6 +770,12 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
     localStorage.getItem('showHiddenChats') === 'true' // false por padrão
   );
 
+  const [hideTemporaryChats, setHideTemporaryChats] = useState(() => {
+    const saved = localStorage.getItem('hideTemporaryChats');
+    return saved !== null ? saved === 'true' : true; // true = ocultar por padrão
+  });
+
+
   useEffect(() => {
     loadTags();
   }, []);
@@ -804,6 +818,19 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
       onChatClosed();
     }
   };
+
+  const toggleHideTemporaryChats = () => {
+    const newValue = !hideTemporaryChats;
+    setHideTemporaryChats(newValue);
+    localStorage.setItem('hideTemporaryChats', String(newValue));
+    
+    console.log('🔄 Filtro de chats temporários alterado:', newValue ? 'OCULTAR @lid e >13' : 'MOSTRAR @lid e >13');
+    
+    if (onChatClosed) {
+      onChatClosed();
+    }
+  };
+
 
   const handleCreateTask = (chat: Chat) => {
     setChatForTask(chat);
@@ -967,17 +994,6 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
     const fromColumn = source.droppableId;
     const toColumn = destination.droppableId;
     const chatId = draggableId;
-    // ✅ NOVO: Verificar se é chat temporário antes de permitir arrastar
-    const chat = chats[fromColumn]?.find(c => c.id === chatId);
-    
-    if (chat && chat.phone && chat.phone.includes('@lid')) {
-      showToast?.({
-        message: "Movimentação bloqueada",
-        description: "Chats temporários (com @lid) não podem ser movidos manualmente. Aguarde o número ser revelado.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (fromColumn === "repescagem") {
       showToast?.({
@@ -1113,6 +1129,8 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
                 toggleHideUploadChat={toggleHideUploadChat}
                 showHiddenChats={showHiddenChats}
                 toggleShowHiddenChats={toggleShowHiddenChats}
+                hideTemporaryChats={hideTemporaryChats}
+                toggleHideTemporaryChats={toggleHideTemporaryChats}
               />
             ))}
           </div>

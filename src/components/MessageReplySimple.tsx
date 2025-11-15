@@ -18,10 +18,12 @@ interface MessageReplySimpleProps {
     fromMe: boolean;
     timestamp: string;
     originalMessageNotFound?: boolean;
+    original_message_not_found?: boolean;
   }>;
+  onReplyClick?: (referenceMessageId: string) => void;
 }
 
-const MessageReplySimple: React.FC<MessageReplySimpleProps> = ({ messageId, replies }) => {
+const MessageReplySimple: React.FC<MessageReplySimpleProps> = ({ messageId, replies, onReplyClick }) => {
   // Buscar se esta mensagem tem um reply
   const reply = replies.find(r => r.messageId === messageId);
 
@@ -30,7 +32,28 @@ const MessageReplySimple: React.FC<MessageReplySimpleProps> = ({ messageId, repl
   }
 
   // ✅ Verificar se a mensagem original não foi encontrada
-  const isNotFound = reply.originalMessageNotFound === true;
+  const isNotFound = reply.originalMessageNotFound === true || reply.original_message_not_found === true;
+
+  // ✅ Detectar tipo real baseado no conteúdo (caso venha como 'unknown')
+  let actualType = reply.replyType;
+  if (actualType === 'unknown' || !actualType) {
+    if (reply.audioUrl) actualType = 'audio';
+    else if (reply.imageUrl) actualType = 'image';
+    else if (reply.videoUrl) actualType = 'video';
+    else if (reply.documentUrl) actualType = 'document';
+    else if (reply.messageContent) actualType = 'text';
+  }
+
+  // ✅ Handler para clique no reply
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Só permite clique se a mensagem original foi encontrada
+    if (!isNotFound && onReplyClick) {
+      console.log('🖱️ Clique no reply:', reply.referenceMessageId);
+      onReplyClick(reply.referenceMessageId);
+    }
+  };
 
   const renderReplyPreview = () => {
     // ✅ Se a mensagem não foi encontrada, mostrar layout especial
@@ -44,13 +67,13 @@ const MessageReplySimple: React.FC<MessageReplySimpleProps> = ({ messageId, repl
             </span>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 italic ml-4">
-            Mensagem não encontrada
+            Mensagem respondida!
           </div>
         </div>
       );
     }
 
-    switch (reply.replyType) {
+    switch (actualType) {
       case 'text':
         return (
           <div className="flex flex-col gap-0.5">
@@ -160,7 +183,12 @@ const MessageReplySimple: React.FC<MessageReplySimpleProps> = ({ messageId, repl
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-800 px-2 py-1.5 rounded-t-lg mb-1 border-l-2 border-blue-500 dark:border-blue-400">
+    <div 
+      className={`bg-gray-50 dark:bg-gray-800 px-2 py-1.5 rounded-t-lg mb-1 border-l-2 border-blue-500 dark:border-blue-400 ${
+        !isNotFound ? 'cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors' : ''
+      }`}
+      onClick={handleClick}
+    >
       {renderReplyPreview()}
     </div>
   );
