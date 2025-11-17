@@ -16,6 +16,7 @@ import {
   Repeat,
   Search,
   Image,
+  Send,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRConnection from "@/components/QRConnection";
@@ -24,6 +25,7 @@ import TagManager from "@/components/TagManager";
 import RoutinesModal from "@/components/RoutinesModal";
 import PreConfiguredTextsModal from "@/components/PreConfiguredTextsModal";
 import GalleryModal from "@/components/GalleryModal";
+import CampaignModal from "@/components/CampaignModal";
 import * as tagApi from "@/api/tags";
 import { logError } from "@/lib/logger";
 import Toast from "@/components/Toast";
@@ -49,11 +51,12 @@ const Sidebar: React.FC<{
   onOpenRoutines: () => void;
   onOpenPreConfiguredTexts: () => void;
   onOpenGallery: () => void;
+  onOpenCampaign: () => void;
   onOpenSettings: () => void;
   onLogout: () => void;
   isOpen: boolean;
   userName: string;
-}> = ({ onClose, onOpenTags, onOpenRoutines, onOpenPreConfiguredTexts, onOpenGallery, onOpenSettings, onLogout, isOpen, userName }) => {
+}> = ({ onClose, onOpenTags, onOpenRoutines, onOpenPreConfiguredTexts, onOpenGallery, onOpenCampaign, onOpenSettings, onLogout, isOpen, userName }) => {
   const [visible, setVisible] = useState(isOpen);
 
   useEffect(() => {
@@ -141,6 +144,16 @@ const Sidebar: React.FC<{
             <Image className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
             <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
               Galeria
+            </span>
+          </button>
+
+          <button
+            className="w-full text-left flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            onClick={onOpenCampaign}
+          >
+            <Send className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+            <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
+              Disparo de Campanha
             </span>
           </button>
 
@@ -525,6 +538,7 @@ const Dashboard: React.FC = () => {
   const [showRoutines, setShowRoutines] = useState(false);
   const [showPreConfiguredTexts, setShowPreConfiguredTexts] = useState(false);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [showCampaignModal, setShowCampaignModal] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [chatsData, setChatsData] = useState<ChatsData | null>(null);
   const [toast, setToast] = useState<{ message: string; description?: string; variant?: string } | null>(null);
@@ -1143,6 +1157,10 @@ const Dashboard: React.FC = () => {
           setShowSidebar(false);
           setShowGalleryModal(true);
         }}
+        onOpenCampaign={() => {
+          setShowSidebar(false);
+          setShowCampaignModal(true);
+        }}
         onOpenSettings={() => {
           setShowSettings(true);
           setShowSidebar(false);
@@ -1301,6 +1319,14 @@ const Dashboard: React.FC = () => {
         )}
         {showGalleryModal && (
           <GalleryModal onClose={() => setShowGalleryModal(false)} />
+        )}
+        {showCampaignModal && (
+          <CampaignModal
+            isOpen={showCampaignModal}
+            onClose={() => setShowCampaignModal(false)}
+            tags={availableTags}
+            chats={chatsData?.chats || []}
+          />
         )}
         {showSettings && (
           <SettingsPanel 
