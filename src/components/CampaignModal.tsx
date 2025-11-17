@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Edit2, Play, Pause, Square, Clock, Users, TrendingUp } from 'lucide-react';
+import { X, Plus, Trash2, Edit2, Play, Pause, Square, Clock, Users, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiFetch } from '../lib/http';
 import { toast } from '../hooks/use-toast';
 
@@ -69,22 +69,47 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
     }
   }, [isOpen]);
 
-  const loadCampaigns = async () => {
+  // Auto-refresh para campanhas em andamento
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const hasActiveCampaigns = campaigns.some(
+      campaign => campaign.status === 'EM_ANDAMENTO'
+    );
+
+    if (!hasActiveCampaigns) return;
+
+    // Atualizar a cada 5 segundos quando houver campanhas em andamento
+    const intervalId = setInterval(() => {
+      loadCampaigns(false);
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [isOpen, campaigns]);
+
+  const loadCampaigns = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const response = await apiFetch('/dashboard/campaigns');
       if (response.success && response.campaigns) {
         setCampaigns(response.campaigns as Campaign[]);
       }
     } catch (error) {
       console.error('Erro ao carregar campanhas:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar as campanhas',
-        variant: 'destructive',
-      });
+      // Apenas mostrar toast se não for atualização automática
+      if (showLoading) {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar as campanhas',
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -419,8 +444,8 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
                             <>
                               <button
                                 onClick={() => handleEdit(campaign)}
-                                className="text-blue-600 hover:text-blue-700"
-                                title="Editar"
+                                className="text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                title={campaign.status === 'EM_ANDAMENTO' ? 'Para Editar, Primeiro Pause a Campanha' : 'Editar'}
                                 disabled={loading || campaign.status === 'EM_ANDAMENTO'}
                               >
                                 <Edit2 size={20} />
@@ -435,7 +460,7 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
                               </button>
                             </>
                           ) : null}
-                          {campaign.status === 'CRIADA' || campaign.status === 'PAUSADA' || campaign.status === 'CANCELADA' ? (
+                          {campaign.status === 'CRIADA' || campaign.status === 'PAUSADA' || campaign.status === 'CANCELADA' || campaign.status === 'CONCLUIDA' ? (
                             <button
                               onClick={() => handleDelete(campaign.id)}
                               className="text-red-600 hover:text-red-700"
@@ -464,9 +489,10 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
 
                       <button
                         onClick={() => handleViewDetails(campaign)}
-                        className="text-blue-600 hover:text-blue-700 text-sm mt-2"
+                        className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 hover:gap-2 transition-all duration-200 ease-in-out mt-2 group"
                       >
-                        Ver detalhes →
+                        Ver detalhes
+                        <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform duration-200" />
                       </button>
                     </div>
                   ))}
@@ -485,9 +511,10 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
                     resetForm();
                     setViewMode('list');
                   }}
-                  className="text-gray-600 hover:text-gray-800"
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-gray-800 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 hover:shadow-md transition-all duration-200 ease-in-out transform hover:scale-105"
                 >
-                  ← Voltar
+                  <ChevronLeft size={16} />
+                  Voltar
                 </button>
                 <h3 className="text-lg font-medium">
                   {viewMode === 'create' ? 'Nova Campanha' : 'Editar Campanha'}
@@ -688,9 +715,10 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
                     setSelectedCampaign(null);
                     setViewMode('list');
                   }}
-                  className="text-gray-600 hover:text-gray-800"
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-gray-800 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 hover:shadow-md transition-all duration-200 ease-in-out transform hover:scale-105"
                 >
-                  ← Voltar
+                  <ChevronLeft size={16} />
+                  Voltar
                 </button>
                 <h3 className="text-lg font-medium">Detalhes da Campanha</h3>
               </div>
