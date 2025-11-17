@@ -87,6 +87,30 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
     return () => clearInterval(intervalId);
   }, [isOpen, campaigns]);
 
+  // Auto-refresh para tela de detalhes quando campanha está em andamento
+  useEffect(() => {
+    if (!isOpen || viewMode !== 'details' || !selectedCampaign) return;
+
+    if (selectedCampaign.status === 'EM_ANDAMENTO') {
+      const intervalId = setInterval(async () => {
+        try {
+          const response = await apiFetch(`/dashboard/campaigns/${selectedCampaign.id}`);
+          if (response.success && response.campaign) {
+            const updatedCampaign = response.campaign as Campaign;
+            setSelectedCampaign(updatedCampaign);
+            setCampaigns(prevCampaigns =>
+              prevCampaigns.map(c => c.id === updatedCampaign.id ? updatedCampaign : c)
+            );
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar detalhes:', error);
+        }
+      }, 5000);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [isOpen, viewMode, selectedCampaign]);
+
   const loadCampaigns = async (showLoading = true) => {
     try {
       if (showLoading) {
