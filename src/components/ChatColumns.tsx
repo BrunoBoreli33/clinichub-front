@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar, Upload, EyeOff, Eye } from "lucide-react";
+import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar, Upload, EyeOff, Eye, Shield } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 import TaskModal from "./TaskModal";
 import TaskManagerModal from "./Taskmanagermodal";
@@ -393,6 +393,55 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     }
   };
 
+  // ✅ NOVA FUNÇÃO: Alternar estado de confiável do chat
+  const handleToggleTrustworthy = async (chatId: string, chatName: string, isTrustworthy: boolean) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showToast?.({
+          message: "Erro de autenticação",
+          description: "Token não encontrado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(buildUrl(`/dashboard/chats/${chatId}/toggle-trustworthy`), {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showToast?.({
+          message: data.isTrustworthy ? "Chat marcado como confiável" : "Chat desmarcado como confiável",
+          description: `O chat "${chatName}" foi ${data.isTrustworthy ? 'marcado como confiável' : 'desmarcado como confiável'}`,
+        });
+        // Recarregar chats para atualizar o estado
+        if (onChatClosed) {
+          onChatClosed();
+        }
+      } else {
+        showToast?.({
+          message: "Erro ao alternar estado de confiável",
+          description: data.message || "Ocorreu um erro desconhecido",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      logError('Erro ao alternar estado de confiável do chat', error);
+      showToast?.({
+        message: "Erro ao alternar estado de confiável",
+        description: "Não foi possível alterar o estado de confiável do chat",
+        variant: "destructive",
+      });
+    }
+  };
+
   const isRepescagemColumn = title === "Repescagem";
   const isTarefaColumn = title === "Tarefa";
 
@@ -700,6 +749,21 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                                 <><Eye className="mr-2 h-3 w-3" />Exibir este chat</>
                               ) : (
                                 <><EyeOff className="mr-2 h-3 w-3" />Ocultar este chat</>
+                              )}
+                            </DropdownMenuItem>
+                            
+                            {/* ✅ NOVA OPÇÃO: Marcar/Desmarcar como Confiável */}
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleTrustworthy(chat.id, chat.name, chat.isTrustworthy);
+                              }}
+                              className="text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              {chat.isTrustworthy ? (
+                                <><Shield className="mr-2 h-3 w-3" />Desmarcar este chat como confiável</>
+                              ) : (
+                                <><Shield className="mr-2 h-3 w-3" />Marcar este chat como confiável</>
                               )}
                             </DropdownMenuItem>
                             

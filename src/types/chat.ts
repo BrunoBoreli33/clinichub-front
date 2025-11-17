@@ -8,7 +8,7 @@ export interface Tag {
   atualizadoEm?: string;
 }
 
-// ✅ Interface atualizada do Chat com lastMessageContent
+// ✅ Interface atualizada do Chat com lastMessageContent e isTrustworthy
 export interface Chat {
   id: string;
   name: string;
@@ -22,6 +22,7 @@ export interface Chat {
   tags: Tag[];
   isUploadChat: boolean;  // ✅ NOVO CAMPO
   isHidden: boolean;
+  isTrustworthy: boolean;  // ✅ NOVO CAMPO - Para disparo de campanha
 }
 
 export interface ChatsData {

@@ -536,6 +536,7 @@ const Dashboard: React.FC = () => {
   const [availableTags, setAvailableTags] = useState<Array<{ id: string; name: string; color: string }>>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [showOnlyTrustworthy, setShowOnlyTrustworthy] = useState<boolean>(false);
 
   const shouldHideUploadChat = () => {
     return localStorage.getItem('hideUploadChat') !== 'false'; // true por padrão
@@ -569,6 +570,14 @@ const Dashboard: React.FC = () => {
       });
     }
     
+    // ✅ NOVO: Filtro de chats confiáveis
+    if (showOnlyTrustworthy) {
+      filtered = filtered.filter((chat: ChatsData['chats'][number]) => {
+        // Mostra apenas chats onde isTrustworthy === true
+        return chat.isTrustworthy;
+      });
+    }
+    
     // Filtro por etiquetas
     if (selectedTagIds.size > 0) {
       filtered = filtered.filter((chat: ChatsData['chats'][number]) => chat.tags.some((t: { id: string; name: string; color: string }) => selectedTagIds.has(t.id)));
@@ -585,7 +594,7 @@ const Dashboard: React.FC = () => {
     }
     
     return { ...chatsData, chats: filtered };
-  }, [chatsData, selectedTagIds, searchTerm]);
+  }, [chatsData, selectedTagIds, searchTerm, showOnlyTrustworthy]);
 
   
   const [notificationEnabled, setNotificationEnabled] = useState(false);
@@ -1203,6 +1212,19 @@ const Dashboard: React.FC = () => {
                       className="pl-9 pr-3 py-1 w-64 text-sm border rounded-md"
                     />
                   </div>
+
+                  {/* ✅ NOVO: Filtro de Chats Confiáveis */}
+                  <button
+                    onClick={() => setShowOnlyTrustworthy(!showOnlyTrustworthy)}
+                    className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                      showOnlyTrustworthy 
+                        ? 'bg-blue-600 text-white border-blue-600' 
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                    title="Filtrar apenas chats confiáveis"
+                  >
+                    Chats Confiáveis
+                  </button>
 
                   <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
                   <div className="flex items-center gap-2 flex-wrap">
