@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic, Copy, Trash2 } from "lucide-react";
+import { X, Send, MoreVertical, Loader2, Edit, Check, Play, Pause, Images, Mic, Copy, Trash2, Reply } from "lucide-react";
 import { buildUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import EmojiPicker from "./EmojiPicker";
@@ -16,6 +16,8 @@ import VideoViewer from "./VideoViewer";
 import DocumentViewer from "./DocumentViewer";
 import MediaTypeSelectorModal from "./MediaTypeSelectorModal";
 import GalleryModal from "./GalleryModal";
+import ReplyIndicator from "./ReplyIndicator";
+import MessageReplySimple from "./MessageReplySimple";
 
 interface Tag {
   id: string;
@@ -96,6 +98,25 @@ interface Document {
   senderName?: string;
 }
 
+interface ReplyData {
+  id: string;
+  messageId: string;
+  referenceMessageId: string;
+  messageContent?: string;
+  mensagemEnviada?: string;
+  senderName?: string;
+  content?: string;
+  audioUrl?: string;
+  documentUrl?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  replyType: string;
+  fromMe: boolean;
+  timestamp: string;
+  original_message_not_found?: boolean;
+}
+
+
 // Tipo para itens vindos da galeria (compatível com GalleryModal)
 type GalleryMediaItem = {
   id: string;
@@ -128,6 +149,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [replies, setReplies] = useState<ReplyData[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -154,6 +176,19 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   // ✅ Estado para controlar scroll durante edição
   const [preventAutoScroll, setPreventAutoScroll] = useState(false);
   
+  
+  // ✅ NOVO: Estado para Reply
+  const [replyTo, setReplyTo] = useState<{
+    messageId: string;
+    content?: string;
+    type: 'text' | 'audio' | 'image' | 'video' | 'document';
+    senderName?: string;
+    imageUrl?: string;
+    audioUrl?: string;
+    videoUrl?: string;
+    documentUrl?: string;
+    fileName?: string;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -163,6 +198,9 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
   
   // ✅ Ref para a mensagem sendo editada
   const editingMessageRef = useRef<HTMLDivElement | null>(null);
+  
+  // ✅ Ref para rastrear todas as mensagens para scroll
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const { toast } = useToast();
 
@@ -278,6 +316,8 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         setAudios([]);
         setPhotos([]);
         setVideos([]);
+        setDocuments([]);
+        setReplies([]); // âœ… ADICIONAR ESTA LINHA
         return;
       }
 
@@ -288,6 +328,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
         setPhotos(data.photos || []);
         setVideos(data.videos || []);
         setDocuments(data.documents || []);
+        setReplies(data.replies || []);
       }
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
@@ -547,39 +588,113 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
     document.body.removeChild(link);
   };
 
+
+  // ✅ NOVO: Função para iniciar reply
+  const startReply = (
+    item: Message | Audio | Photo | Video | Document, 
+    type: 'text' | 'audio' | 'image' | 'video' | 'document'
+  ) => {
+    setReplyTo({
+      messageId: item.messageId,
+      content: 'content' in item ? item.content : ('caption' in item ? item.caption : undefined),
+      type,
+      senderName: item.senderName,
+      imageUrl: 'imageUrl' in item ? item.imageUrl : undefined,
+      audioUrl: 'audioUrl' in item ? item.audioUrl : undefined,
+      videoUrl: 'videoUrl' in item ? item.videoUrl : undefined,
+      documentUrl: 'documentUrl' in item ? item.documentUrl : undefined,
+      fileName: 'fileName' in item ? item.fileName : undefined
+    });
+    
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // ✅ NOVO: Função para scroll para mensagem referenciada
+  const scrollToMessage = (referenceMessageId: string) => {
+    console.log('🎯 Tentando scroll para mensagem:', referenceMessageId);
+    
+    // Verificar se a mensagem existe no banco de dados
+    const messageExists = getCombinedMessages().some(item => {
+      return item.messageId === referenceMessageId;
+    });
+
+    if (!messageExists) {
+      console.log('⚠️ Mensagem não encontrada no banco de dados:', referenceMessageId);
+      return; // Não fazer scroll se mensagem não existe
+    }
+
+    // Buscar a referência do elemento
+    const targetElement = messageRefs.current[referenceMessageId];
+    
+    if (targetElement && messagesContainerRef.current) {
+      console.log('✅ Elemento encontrado, fazendo scroll');
+      
+      // Fazer scroll suave
+      targetElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+
+      // Adicionar animação de destaque temporária
+      targetElement.classList.add('bg-yellow-100', 'dark:bg-yellow-900');
+      setTimeout(() => {
+        targetElement.classList.remove('bg-yellow-100', 'dark:bg-yellow-900');
+      }, 2000);
+    } else {
+      console.log('❌ Elemento não encontrado na DOM:', referenceMessageId);
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
     const token = localStorage.getItem("token");
     const messageText = newMessage;
+    const replyToCache = replyTo; // ✅ CORREÇÃO: Cache do estado de reply
     setNewMessage("");
 
     try {
-      const response = await fetch(buildUrl('/dashboard/messages/send'), {
+      const endpoint = replyToCache 
+        ? `/dashboard/messages/reply/${chat.id}`
+        : '/dashboard/messages/send';
+      
+      const body = replyToCache
+        ? {
+            content: messageText,
+            referenceMessageId: replyToCache.messageId
+          }
+        : {
+            chatId: chat.id,
+            phone: chat.phone,
+            message: messageText,
+          };
+
+      const response = await fetch(buildUrl(endpoint), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          chatId: chat.id,
-          phone: chat.phone,
-          message: messageText,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
       if (data.success) {
         console.log("✅ Mensagem enviada com sucesso");
+        setReplyTo(null); // Limpar reply após enviar
         loadMessages(true);
       } else {
         console.error("❌ Erro ao enviar mensagem:", data.message);
         setNewMessage(messageText);
+        setReplyTo(replyToCache); // ✅ CORREÇÃO: Restaurar reply em caso de erro
       }
     } catch (error) {
       console.error("❌ Erro ao enviar mensagem:", error);
       setNewMessage(messageText);
+      setReplyTo(replyToCache); // ✅ CORREÇÃO: Restaurar reply em caso de erro
     } finally {
       setSending(false);
     }
@@ -965,6 +1080,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                   return (
                     <div
                       key={audio.messageId}
+                      ref={(el) => { messageRefs.current[audio.messageId] = el; }}
                       className={`flex ${audio.fromMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
@@ -974,6 +1090,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
                         }`}
                       >
+                        <MessageReplySimple messageId={audio.messageId} replies={replies} onReplyClick={scrollToMessage} />
                         <AudioPlayer
                           audioUrl={audio.audioUrl}
                           duration={audio.seconds}
@@ -1004,6 +1121,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => startReply(audio, 'audio')}>
+                        <Reply className="h-4 w-4 mr-2" />
+                        Responder
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDeleteMessage(audio.messageId, "audio", audio.fromMe)}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1027,6 +1148,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                   return (
                     <div
                       key={photo.messageId}
+                      ref={(el) => { messageRefs.current[photo.messageId] = el; }}
                       className={`flex ${photo.fromMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
@@ -1036,6 +1158,9 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white shadow-sm border border-gray-100"
                         }`}
                       >
+                        <div className="px-3 pt-2">
+                          <MessageReplySimple messageId={photo.messageId} replies={replies} onReplyClick={scrollToMessage} />
+                        </div>
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
                           className="relative cursor-pointer w-full bg-gray-200"
@@ -1111,6 +1236,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => startReply(photo, 'image')}>
+                                  <Reply className="h-4 w-4 mr-2" />
+                                  Responder
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => togglePhotoInGallery(photo.id)}>
                                   {photo.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
                                 </DropdownMenuItem>
@@ -1138,6 +1267,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                   return (
                     <div
                       key={video.messageId}
+                      ref={(el) => { messageRefs.current[video.messageId] = el; }}
                       className={`flex ${video.fromMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
@@ -1147,6 +1277,9 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white shadow-sm border border-gray-100"
                         }`}
                       >
+                        <div className="px-3 pt-2">
+                          <MessageReplySimple messageId={video.messageId} replies={replies} onReplyClick={scrollToMessage} />
+                        </div>
                         {/* ✅ Container com aspect-ratio fixo */}
                         <div 
                           className="relative cursor-pointer w-full bg-gray-200"
@@ -1215,6 +1348,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => startReply(video, 'video')}>
+                                  <Reply className="h-4 w-4 mr-2" />
+                                  Responder
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => toggleVideoInGallery(video.id)}>
                                   {video.savedInGallery ? "Remover da Galeria" : "Salvar na Galeria"}
                                 </DropdownMenuItem>
@@ -1238,6 +1375,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                   return (
                     <div
                       key={document.messageId}
+                      ref={(el) => { messageRefs.current[document.messageId] = el; }}
                       className={`flex ${document.fromMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
@@ -1246,6 +1384,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
                         }`}>
+                        <MessageReplySimple messageId={document.messageId} replies={replies} onReplyClick={scrollToMessage} />
                         <div 
                           className="px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => handleDocumentDownload(document.documentUrl, document.fileName)}
@@ -1323,6 +1462,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => startReply(document, 'document')}>
+                                  <Reply className="h-4 w-4 mr-2" />
+                                  Responder
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleDeleteMessage(document.messageId, "document", document.fromMe)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1345,7 +1488,12 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                     <div
                       key={message.messageId}
                       className={`flex ${message.fromMe ? "justify-end" : "justify-start"}`}
-                      ref={editingMessageId === message.messageId ? editingMessageRef : null}
+                      ref={(el) => {
+                        messageRefs.current[message.messageId] = el;
+                        if (editingMessageId === message.messageId) {
+                          editingMessageRef.current = el;
+                        }
+                      }}
                     >
                       <div
                         className={`group max-w-[70%] rounded-2xl px-4 py-2 ${
@@ -1354,6 +1502,7 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                             : "bg-white text-gray-900 shadow-sm border border-gray-100"
                         }`}
                       >
+                        <MessageReplySimple messageId={message.messageId} replies={replies} onReplyClick={scrollToMessage} />
                         {message.type === "audio" ? (
                           <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-3">
@@ -1441,6 +1590,10 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => startReply(message, 'text')}>
+                                      <Reply className="h-3 w-3 mr-2" />
+                                      Responder
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => copyMessage(message.content)}>
                                       <Copy className="h-3 w-3 mr-2" />
                                       Copiar
@@ -1476,6 +1629,13 @@ const ChatWindow = ({ chat, onClose, setOpenChatId }: ChatWindowProps) => {
           </div>
 
           <div className="p-4 bg-white border-t border-gray-100">
+            {replyTo && (
+              <ReplyIndicator 
+                replyTo={replyTo}
+                onCancel={() => setReplyTo(null)}
+              />
+            )}
+            
             <div className="flex items-center gap-2">
               <EmojiPicker onEmojiSelect={handleEmojiSelect} />
               <PreConfiguredTextsPicker onSelectText={handlePreConfiguredTextSelect} />

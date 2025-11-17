@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar, Upload, EyeOff, Eye } from "lucide-react";
+import { MoreVertical, Tag as TagIcon, MoveRight, ArrowUpDown, Settings, Move, Loader2, RotateCcw, Calendar, Upload, EyeOff, Eye, Shield } from "lucide-react";
 import ChatWindow from "./ChatWindow";
 import TaskModal from "./TaskModal";
 import TaskManagerModal from "./Taskmanagermodal";
@@ -173,9 +173,11 @@ interface ChatColumnProps {
   toggleHideUploadChat: () => void;
   showHiddenChats: boolean;
   toggleShowHiddenChats: () => void;
+  hideTemporaryChats: boolean;
+  toggleHideTemporaryChats: () => void;
 }
 
-const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, onChatClosed, showToast, hideUploadChat, toggleHideUploadChat, showHiddenChats, toggleShowHiddenChats }: ChatColumnProps) => {
+const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, onChatClosed, showToast, hideUploadChat, toggleHideUploadChat, showHiddenChats, toggleShowHiddenChats, hideTemporaryChats, toggleHideTemporaryChats }: ChatColumnProps) => {
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
     const saved = localStorage.getItem(`column-${id}-sortOrder`);
     return (saved as "recent" | "oldest") || "recent";
@@ -218,6 +220,12 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     return chat.phone.includes("newsletter") || chat.phone.length > 20;
   };
 
+  const isTemporaryChat = (chat: Chat) => {
+    if (!chat.phone) return false;
+    return chat.phone.includes('@lid') || chat.phone.length > 13;
+  };
+
+
   const truncateMessage = (message: string | null, maxLength: number = 40) => {
     if (!message) return "Sem mensagens";
     if (message.length <= maxLength) return message;
@@ -228,6 +236,7 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     if (!showGroups && chat.isGroup) return false;
     if (!showNewsletters && isNewsletter(chat)) return false;
     if (!showHiddenChats && chat.isHidden) return false;
+    if (hideTemporaryChats && isTemporaryChat(chat)) return false;
     return true;
   });
 
@@ -238,7 +247,18 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   };
 
   const handleMoveFromDropdown = (chatId: string, toColumnId: string) => {
-    // ✅ Bloqueia movimentação de chats na coluna "repescagem"
+    // ✅ NOVO: Verificar se é chat temporário
+    const chat = chats[id]?.find(c => c.id === chatId);
+    
+    if (chat && chat.phone && chat.phone.includes('@lid')) {
+      showToast?.({
+        message: "Movimentação bloqueada",
+        description: "Chats temporários (com @lid) não podem ser movidos manualmente. Aguarde o número ser revelado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (id === "repescagem") {
       showToast?.({
         message: "Movimentação bloqueada",
@@ -373,6 +393,55 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
     }
   };
 
+  // ✅ NOVA FUNÇÃO: Alternar estado de confiável do chat
+  const handleToggleTrustworthy = async (chatId: string, chatName: string, isTrustworthy: boolean) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showToast?.({
+          message: "Erro de autenticação",
+          description: "Token não encontrado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(buildUrl(`/dashboard/chats/${chatId}/toggle-trustworthy`), {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showToast?.({
+          message: data.isTrustworthy ? "Chat marcado como confiável" : "Chat desmarcado como confiável",
+          description: `O chat "${chatName}" foi ${data.isTrustworthy ? 'marcado como confiável' : 'desmarcado como confiável'}`,
+        });
+        // Recarregar chats para atualizar o estado
+        if (onChatClosed) {
+          onChatClosed();
+        }
+      } else {
+        showToast?.({
+          message: "Erro ao alternar estado de confiável",
+          description: data.message || "Ocorreu um erro desconhecido",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      logError('Erro ao alternar estado de confiável do chat', error);
+      showToast?.({
+        message: "Erro ao alternar estado de confiável",
+        description: "Não foi possível alterar o estado de confiável do chat",
+        variant: "destructive",
+      });
+    }
+  };
+
   const isRepescagemColumn = title === "Repescagem";
   const isTarefaColumn = title === "Tarefa";
 
@@ -451,30 +520,6 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
                     
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger className="text-xs">
-                        Chat de Upload
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuItem 
-                          className="text-xs"
-                          onClick={() => {
-                            if (hideUploadChat) toggleHideUploadChat();
-                          }}
-                        >
-                          {!hideUploadChat && "✓ "}Mostrar chat de upload
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-xs"
-                          onClick={() => {
-                            if (!hideUploadChat) toggleHideUploadChat();
-                          }}
-                        >
-                          {hideUploadChat && "✓ "}Ocultar chat de upload
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 
@@ -498,6 +543,29 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                       }}
                     >
                       {!showHiddenChats && "✓ "}Esconder chats ocultos
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-xs">
+                    Ocultar @lid
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem 
+                      className="text-xs"
+                      onClick={() => {
+                        if (!hideTemporaryChats) toggleHideTemporaryChats();
+                      }}
+                    >
+                      {hideTemporaryChats && "✓ "}Ocultar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="text-xs"
+                      onClick={() => {
+                        if (hideTemporaryChats) toggleHideTemporaryChats();
+                      }}
+                    >
+                      {!hideTemporaryChats && "✓ "}Mostrar
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
@@ -684,6 +752,21 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
                               )}
                             </DropdownMenuItem>
                             
+                            {/* ✅ NOVA OPÇÃO: Marcar/Desmarcar como Confiável */}
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleTrustworthy(chat.id, chat.name, chat.isTrustworthy);
+                              }}
+                              className="text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              {chat.isTrustworthy ? (
+                                <><Shield className="mr-2 h-3 w-3" />Desmarcar este chat como confiável</>
+                              ) : (
+                                <><Shield className="mr-2 h-3 w-3" />Marcar este chat como confiável</>
+                              )}
+                            </DropdownMenuItem>
+                            
                             <DropdownMenuSeparator />
                             <DropdownMenuItem disabled className="text-xs">
                               <MoveRight className="mr-2 h-3 w-3" />
@@ -751,6 +834,12 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
     localStorage.getItem('showHiddenChats') === 'true' // false por padrão
   );
 
+  const [hideTemporaryChats, setHideTemporaryChats] = useState(() => {
+    const saved = localStorage.getItem('hideTemporaryChats');
+    return saved !== null ? saved === 'true' : true; // true = ocultar por padrão
+  });
+
+
   useEffect(() => {
     loadTags();
   }, []);
@@ -793,6 +882,19 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
       onChatClosed();
     }
   };
+
+  const toggleHideTemporaryChats = () => {
+    const newValue = !hideTemporaryChats;
+    setHideTemporaryChats(newValue);
+    localStorage.setItem('hideTemporaryChats', String(newValue));
+    
+    console.log('🔄 Filtro de chats temporários alterado:', newValue ? 'OCULTAR @lid e >13' : 'MOSTRAR @lid e >13');
+    
+    if (onChatClosed) {
+      onChatClosed();
+    }
+  };
+
 
   const handleCreateTask = (chat: Chat) => {
     setChatForTask(chat);
@@ -1091,6 +1193,8 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
                 toggleHideUploadChat={toggleHideUploadChat}
                 showHiddenChats={showHiddenChats}
                 toggleShowHiddenChats={toggleShowHiddenChats}
+                hideTemporaryChats={hideTemporaryChats}
+                toggleHideTemporaryChats={toggleHideTemporaryChats}
               />
             ))}
           </div>
