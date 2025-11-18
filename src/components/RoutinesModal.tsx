@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { X, Plus, Trash2, Save } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { X, Plus, Trash2, Save, Image, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { buildUrl } from "@/lib/api";
+import GalleryModal from "./GalleryModal";
 
 interface RoutineText {
   id: string;
   sequenceNumber: number;
   textContent: string;
   hoursDelay: number;
+  photoIds?: string[];
+  videoIds?: string[];
 }
 
 interface RoutinesModalProps {
@@ -21,13 +24,12 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
   const [routines, setRoutines] = useState<RoutineText[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<{ [key: number]: { text: string; hours: number } }>({});
+  const [formData, setFormData] = useState<{ [key: number]: { text: string; hours: number; photoIds: string[]; videoIds: string[] } }>({});
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [galleryFilterType, setGalleryFilterType] = useState<"photos" | "videos" | null>(null);
+  const [editingSequence, setEditingSequence] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadRoutines();
-  }, []);
-
-  const loadRoutines = async () => {
+  const loadRoutines = useCallback(async () => {
     const token = localStorage.getItem("token");
     try {
       const response = await fetch(buildUrl("/dashboard/routines"), {
@@ -41,9 +43,14 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
       if (data.success) {
         setRoutines(data.routines || []);
         
-        const initialData: { [key: number]: { text: string; hours: number } } = {};
+        const initialData: { [key: number]: { text: string; hours: number; photoIds: string[]; videoIds: string[] } } = {};
         data.routines.forEach((r: RoutineText) => {
-          initialData[r.sequenceNumber] = { text: r.textContent, hours: r.hoursDelay };
+          initialData[r.sequenceNumber] = { 
+            text: r.textContent, 
+            hours: r.hoursDelay,
+            photoIds: r.photoIds || [],
+            videoIds: r.videoIds || []
+          };
         });
         setFormData(initialData);
       }
@@ -53,7 +60,11 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    loadRoutines();
+  }, [loadRoutines]);
 
   const handleSave = async (sequenceNumber: number) => {
     const token = localStorage.getItem("token");
@@ -71,6 +82,8 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
         sequenceNumber,
         textContent: data.text,
         hoursDelay: data.hours,
+        photoIds: data.photoIds.length > 0 ? data.photoIds : null,
+        videoIds: data.videoIds.length > 0 ? data.videoIds : null,
       };
 
       const response = await fetch(
@@ -122,14 +135,51 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
     }
   };
 
-  const updateFormData = (seq: number, field: "text" | "hours", value: string) => {
+  const updateFormData = (seq: number, field: "text" | "hours" | "photoIds" | "videoIds", value: string | number | string[]) => {
     setFormData(prev => ({
       ...prev,
       [seq]: {
         text: field === "text" ? String(value) : prev[seq]?.text || "",
         hours: field === "hours" ? Number(value) : prev[seq]?.hours || 0,
+        photoIds: field === "photoIds" ? value as string[] : prev[seq]?.photoIds || [],
+        videoIds: field === "videoIds" ? value as string[] : prev[seq]?.videoIds || [],
       },
     }));
+  };
+
+  const handleAttachPhotos = (seq: number) => {
+    setEditingSequence(seq);
+    setGalleryFilterType("photos");
+    setShowGalleryModal(true);
+  };
+
+  const handleAttachVideos = (seq: number) => {
+    setEditingSequence(seq);
+    setGalleryFilterType("videos");
+    setShowGalleryModal(true);
+  };
+
+  const handleMediaSelected = (items: Array<{id: string; imageUrl?: string; videoUrl?: string}>) => {
+    if (editingSequence === null) return;
+
+    if (galleryFilterType === "photos") {
+      const photoIds = items.map(item => item.id);
+      updateFormData(editingSequence, "photoIds", photoIds);
+    } else if (galleryFilterType === "videos") {
+      const videoIds = items.map(item => item.id);
+      updateFormData(editingSequence, "videoIds", videoIds);
+    }
+
+    setShowGalleryModal(false);
+    setEditingSequence(null);
+  };
+
+  const handleRemoveAllPhotos = (seq: number) => {
+    updateFormData(seq, "photoIds", []);
+  };
+
+  const handleRemoveAllVideos = (seq: number) => {
+    updateFormData(seq, "videoIds", []);
   };
 
   if (loading) {
@@ -156,7 +206,7 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
           {[1, 2, 3, 4, 5, 6, 7].map(seq => {
             const routine = routines.find(r => r.sequenceNumber === seq);
             const isEditing = editingId === routine?.id || (!routine && editingId === `new-${seq}`);
-            const currentData = formData[seq] || { text: "", hours: 0 };
+            const currentData = formData[seq] || { text: "", hours: 0, photoIds: [], videoIds: [] };
 
             return (
               <div key={seq} className="border rounded-lg p-4 bg-gray-50">
@@ -206,6 +256,69 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
                     </p>
                   </div>
 
+                  {(isEditing || !routine) && (
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAttachPhotos(seq)}
+                        className="flex items-center gap-1"
+                      >
+                        <Image className="w-4 h-4" />
+                        Anexar Fotos
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAttachVideos(seq)}
+                        className="flex items-center gap-1"
+                      >
+                        <Video className="w-4 h-4" />
+                        Anexar Vídeos
+                      </Button>
+                    </div>
+                  )}
+
+                  {currentData.photoIds && currentData.photoIds.length > 0 && (
+                    <div className="bg-blue-50 rounded p-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-blue-700">
+                          📷 {currentData.photoIds.length} foto(s) anexada(s)
+                        </p>
+                        {isEditing && (
+                          <button
+                            onClick={() => handleRemoveAllPhotos(seq)}
+                            className="text-red-500 hover:text-red-700"
+                            title="Remover todas as fotos"
+                          >
+                            ❌
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentData.videoIds && currentData.videoIds.length > 0 && (
+                    <div className="bg-purple-50 rounded p-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-purple-700">
+                          🎥 {currentData.videoIds.length} vídeo(s) anexado(s)
+                        </p>
+                        {isEditing && (
+                          <button
+                            onClick={() => handleRemoveAllVideos(seq)}
+                            className="text-red-500 hover:text-red-700"
+                            title="Remover todos os vídeos"
+                          >
+                            ❌
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     {(!routine || isEditing) && (
                       <Button
@@ -240,6 +353,18 @@ const RoutinesModal: React.FC<RoutinesModalProps> = ({ onClose, showToast }) => 
           })}
         </div>
       </div>
+
+      {showGalleryModal && (
+        <GalleryModal
+          onClose={() => {
+            setShowGalleryModal(false);
+            setEditingSequence(null);
+          }}
+          selectionMode={true}
+          filterType={galleryFilterType}
+          onMediaSelected={handleMediaSelected}
+        />
+      )}
     </div>
   );
 };
