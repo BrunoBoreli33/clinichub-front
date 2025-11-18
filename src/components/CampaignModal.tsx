@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Edit2, Play, Pause, Square, Clock, Users, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Plus, Trash2, Edit2, Play, Pause, Square, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, ImagePlus, Video } from 'lucide-react';
 import { apiFetch } from '../lib/http';
 import { toast } from '../hooks/use-toast';
+import GalleryModal from './GalleryModal';
 
 interface Campaign {
   id: string;
@@ -16,6 +17,8 @@ interface Campaign {
   nextDispatchTime: string | null;
   tagIds: string[] | null;
   allTrustworthy: boolean;
+  photoIds?: string[] | null;
+  videoIds?: string[] | null;
   criadoEm: string;
   atualizadoEm: string;
 }
@@ -49,6 +52,12 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(false);
+  // Estados para mídias
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [galleryFilterType, setGalleryFilterType] = useState<'photos' | 'videos'>('photos');
+  const [selectedPhotos, setSelectedPhotos] = useState<Array<{id: string; imageUrl: string}>>([]);
+  const [selectedVideos, setSelectedVideos] = useState<Array<{id: string; videoUrl: string}>>([]);
+
 
   // Form state
   const [formData, setFormData] = useState({
@@ -58,6 +67,8 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
     intervalMinutes: 60,
     tagIds: [] as string[],
     allTrustworthy: false,
+    photoIds: [] as string[],
+    videoIds: [] as string[],
   });
 
   // Filtro de chats para pré-visualização
@@ -136,6 +147,23 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
       }
     }
   };
+  const handleMediaSelected = (items: Array<{id: string; imageUrl?: string; videoUrl?: string}>, type: 'photo' | 'video') => {
+    if (type === 'photo') {
+      setSelectedPhotos(items as Array<{id: string; imageUrl: string}>);
+      setFormData({
+        ...formData,
+        photoIds: items.map(item => item.id),
+      });
+    } else if (type === 'video') {
+      setSelectedVideos(items as Array<{id: string; videoUrl: string}>);
+      setFormData({
+        ...formData,
+        videoIds: items.map(item => item.id),
+      });
+    }
+    setShowGalleryModal(false);
+  };
+
 
   const getFilteredChats = () => {
     if (formData.allTrustworthy) {
@@ -197,10 +225,16 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
     try {
       setLoading(true);
       
+      const payload = {
+        ...formData,
+        photoIds: formData.photoIds.length > 0 ? formData.photoIds : null,
+        videoIds: formData.videoIds.length > 0 ? formData.videoIds : null,
+      };
+
       if (viewMode === 'edit' && selectedCampaign) {
         await apiFetch(`/dashboard/campaigns/${selectedCampaign.id}`, {
           method: 'PUT',
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
         toast({
           title: 'Sucesso',
@@ -209,7 +243,7 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
       } else {
         await apiFetch('/dashboard/campaigns', {
           method: 'POST',
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
         toast({
           title: 'Sucesso',
@@ -344,7 +378,11 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
       intervalMinutes: campaign.intervalMinutes,
       tagIds: campaign.tagIds || [],
       allTrustworthy: campaign.allTrustworthy,
+      photoIds: campaign.photoIds || [],
+      videoIds: campaign.videoIds || [],
     });
+    setSelectedPhotos((campaign.photoIds || []).map(id => ({ id, imageUrl: '' })));
+    setSelectedVideos((campaign.videoIds || []).map(id => ({ id, videoUrl: '' })));
     setViewMode('edit');
   };
 
@@ -361,8 +399,12 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
       intervalMinutes: 60,
       tagIds: [],
       allTrustworthy: false,
+      photoIds: [],
+      videoIds: [],
     });
     setSelectedCampaign(null);
+    setSelectedPhotos([]);
+    setSelectedVideos([]);
   };
 
   const getStatusBadge = (status: Campaign['status']) => {
@@ -385,6 +427,7 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
@@ -665,6 +708,65 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
                 </p>
               </div>
 
+              {/* Seção de Mídias */}
+              <div className="border-t pt-4">
+                <label className="block text-sm font-medium mb-3">
+                  Mídias (Opcional)
+                </label>
+                
+                <div className="space-y-3">
+                  {/* Fotos */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-600">
+                        Fotos {selectedPhotos.length > 0 && `(${selectedPhotos.length})`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGalleryFilterType('photos');
+                          setShowGalleryModal(true);
+                        }}
+                        className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                      >
+                        <ImagePlus size={14} />
+                        Adicionar
+                      </button>
+                    </div>
+                    {selectedPhotos.length > 0 && (
+                      <div className="text-sm text-gray-600 bg-gray-50 rounded p-2">
+                        {selectedPhotos.length} foto(s) selecionada(s)
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Vídeos */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-600">
+                        Vídeos {selectedVideos.length > 0 && `(${selectedVideos.length})`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGalleryFilterType('videos');
+                          setShowGalleryModal(true);
+                        }}
+                        className="flex items-center gap-1 px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
+                      >
+                        <Video size={14} />
+                        Adicionar
+                      </button>
+                    </div>
+                    {selectedVideos.length > 0 && (
+                      <div className="text-sm text-gray-600 bg-gray-50 rounded p-2">
+                        {selectedVideos.length} vídeo(s) selecionado(s)
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Configurações de Disparo */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -811,6 +913,29 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
                   </div>
                 </div>
 
+                {/* Mídias Anexadas */}
+                {(selectedCampaign.photoIds && selectedCampaign.photoIds.length > 0) && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Fotos Anexadas</label>
+                    <div className="bg-gray-50 rounded p-3">
+                      <p className="text-sm text-gray-600">
+                        {selectedCampaign.photoIds.length} foto(s) serão enviadas
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {(selectedCampaign.videoIds && selectedCampaign.videoIds.length > 0) && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Vídeos Anexados</label>
+                    <div className="bg-gray-50 rounded p-3">
+                      <p className="text-sm text-gray-600">
+                        {selectedCampaign.videoIds.length} vídeo(s) serão enviados
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Próximo Disparo */}
                 {selectedCampaign.nextDispatchTime && (
                   <div>
@@ -828,6 +953,17 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, tags, ch
         </div>
       </div>
     </div>
+
+      {/* Modal de Galeria */}
+      {showGalleryModal && (
+        <GalleryModal
+          onClose={() => setShowGalleryModal(false)}
+          selectionMode={true}
+          filterType={galleryFilterType}
+          onMediaSelected={handleMediaSelected}
+        />
+      )}
+    </>
   );
 };
 
