@@ -447,7 +447,7 @@ const ChatColumn = ({ id, title, color, borderGradient, chats, availableTags, on
   const isTarefaColumn = title === "Tarefa";
 
   return (
-    <Card className="w-80 h-full bg-gray-50 border-0 shadow-card flex flex-col flex-shrink-0">
+    <Card className="w-80 h-full bg-gray-50 border-0 shadow-card flex flex-col flex-shrink-0" style={{ scrollSnapAlign: 'start' }}>
       {/* top accent bar (GitLab-like) */}
       {borderGradient && (
         <div className="w-full h-1.5 rounded-t-md" style={{ background: borderGradient }} />

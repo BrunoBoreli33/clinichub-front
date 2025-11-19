@@ -10,6 +10,7 @@ import {
   X,
   LogOut,
   ChevronRight,
+  ChevronLeft,
   User,
   MessageCircle,
   File,
@@ -788,6 +789,31 @@ const Dashboard: React.FC = () => {
   });
 
   const fixedHScrollRef = useRef<HTMLDivElement | null>(null);
+  const columnsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Navegação entre colunas: pula uma coluna por vez (largura da coluna + gap)
+  const scrollColumnsByOne = (direction: "next" | "prev") => {
+    const wrapper = columnsContainerRef.current;
+    if (!wrapper) return;
+
+    const cols = wrapper.querySelector('.horizontal-scroll-container') as HTMLElement | null;
+    if (!cols) return;
+
+    const inner = cols.firstElementChild as HTMLElement | null; // flex container that holds columns
+    if (!inner) return;
+
+    const firstCol = inner.firstElementChild as HTMLElement | null;
+    if (!firstCol) return;
+
+    // gap between columns (CSS gap / column-gap)
+    const cs = window.getComputedStyle(inner as Element);
+    const gapStr = cs.columnGap || (cs as any).gap || '0px';
+    const gap = parseFloat(gapStr) || 0;
+
+    const amount = Math.round(firstCol.getBoundingClientRect().width + gap);
+
+    cols.scrollBy({ left: direction === 'next' ? amount : -amount, behavior: 'smooth' });
+  };
 
   // Sincroniza um scrollbar fixo no rodapé com o container horizontal das colunas
   useEffect(() => {
@@ -1338,7 +1364,26 @@ const Dashboard: React.FC = () => {
               {/* Content area scrolls vertically internally; only the columns area scrolls horizontally */}
               <div className="flex-1 overflow-y-auto">
                 <div className="min-w-0">
-                  <div className="overflow-x-auto" style={{ minWidth: 0 }}>
+                  <div ref={columnsContainerRef} className="overflow-x-auto relative" style={{ minWidth: 0 }}>
+                    {/* Navigation buttons overlay */}
+                    <button
+                      type="button"
+                      aria-label="Coluna anterior"
+                      onClick={() => scrollColumnsByOne('prev')}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white shadow-md rounded-full p-2 border border-gray-200"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-gray-700" />
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label="Próxima coluna"
+                      onClick={() => scrollColumnsByOne('next')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white shadow-md rounded-full p-2 border border-gray-200"
+                    >
+                      <ChevronRight className="w-4 h-4 text-gray-700" />
+                    </button>
+
                     <ChatColumns
                       chatsData={filteredChatsData}
                       showToast={showToast}

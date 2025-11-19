@@ -200,6 +200,11 @@ All colors MUST be HSL.
   -webkit-overflow-scrolling: touch;
 }
 
+/* GitLab-like snap behavior: snap to each column start */
+.horizontal-scroll-container {
+  scroll-snap-type: x proximity;
+}
+
 /* Ocultar scrollbar quando não estiver em uso (opcional) */
 @supports selector(::-webkit-scrollbar) {
   .horizontal-scroll-container:not(:hover)::-webkit-scrollbar-thumb {
