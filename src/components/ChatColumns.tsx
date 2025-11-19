@@ -25,14 +25,14 @@ interface ChatColumnsProps {
 }
 
 const columnsConfig = [
-  { id: "vip", title: "Atendimento VIP", color: "from-orange-400 to-orange-500" },
-  { id: "humanizado", title: "Atendimento Humanizado", color: "from-blue-500 to-blue-600" },
-  { id: "inicial", title: "Atendimento Inicial", color: "from-green-500 to-green-600" },
-  { id: "repescagem", title: "Repescagem", color: "from-red-500 to-red-600" },
-  { id: "tarefa", title: "Tarefa", color: "from-purple-500 to-purple-600" },
-  { id: "lead_quente", title: "Lead Quente", color: "from-yellow-400 to-yellow-500" },
-  { id: "cliente", title: "Cliente", color: "from-emerald-500 to-emerald-600" },
-  { id: "lead_frio", title: "Lead Frio", color: "from-gray-400 to-gray-500" }
+  { id: "vip", title: "Atendimento VIP", color: "from-orange-400 to-orange-500", borderGradient: "linear-gradient(90deg,#fb923c,#f97316)" },
+  { id: "humanizado", title: "Atendimento Humanizado", color: "from-blue-500 to-blue-600", borderGradient: "linear-gradient(90deg,#3b82f6,#2563eb)" },
+  { id: "inicial", title: "Atendimento Inicial", color: "from-green-500 to-green-600", borderGradient: "linear-gradient(90deg,#22c55e,#16a34a)" },
+  { id: "repescagem", title: "Repescagem", color: "from-red-500 to-red-600", borderGradient: "linear-gradient(90deg,#ef4444,#dc2626)" },
+  { id: "tarefa", title: "Tarefa", color: "from-purple-500 to-purple-600", borderGradient: "linear-gradient(90deg,#a78bfa,#8b5cf6)" },
+  { id: "lead_quente", title: "Lead Quente", color: "from-yellow-400 to-yellow-500", borderGradient: "linear-gradient(90deg,#facc15,#eab308)" },
+  { id: "cliente", title: "Cliente", color: "from-emerald-500 to-emerald-600", borderGradient: "linear-gradient(90deg,#10b981,#059669)" },
+  { id: "lead_frio", title: "Lead Frio", color: "from-gray-400 to-gray-500", borderGradient: "linear-gradient(90deg,#9ca3af,#6b7280)" }
 ];
 
 const sortChatsByLastMessage = (chats: Chat[], sortOrder: "recent" | "oldest") => {
@@ -159,6 +159,7 @@ interface ChatColumnProps {
   id: string;
   title: string;
   color: string;
+  borderGradient?: string;
   chats: Chat[];
   availableTags: Tag[];
   onChatSelect: (chat: Chat) => void;
@@ -177,7 +178,7 @@ interface ChatColumnProps {
   toggleHideTemporaryChats: () => void;
 }
 
-const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, onChatClosed, showToast, hideUploadChat, toggleHideUploadChat, showHiddenChats, toggleShowHiddenChats, hideTemporaryChats, toggleHideTemporaryChats }: ChatColumnProps) => {
+const ChatColumn = ({ id, title, color, borderGradient, chats, availableTags, onChatSelect, onMoveChat, onOpenTagManager, onCreateTask, onOpenTaskManager, onRefresh, onChatClosed, showToast, hideUploadChat, toggleHideUploadChat, showHiddenChats, toggleShowHiddenChats, hideTemporaryChats, toggleHideTemporaryChats }: ChatColumnProps) => {
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">(() => {
     const saved = localStorage.getItem(`column-${id}-sortOrder`);
     return (saved as "recent" | "oldest") || "recent";
@@ -446,7 +447,11 @@ const ChatColumn = ({ id, title, color, chats, availableTags, onChatSelect, onMo
   const isTarefaColumn = title === "Tarefa";
 
   return (
-    <Card className="w-80 h-full bg-gradient-card border-0 shadow-card flex flex-col flex-shrink-0">
+    <Card className="w-80 h-full bg-gray-50 border-0 shadow-card flex flex-col flex-shrink-0">
+      {/* top accent bar (GitLab-like) */}
+      {borderGradient && (
+        <div className="w-full h-1.5 rounded-t-md" style={{ background: borderGradient }} />
+      )}
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className={`text-base font-bold bg-gradient-to-r ${color} bg-clip-text text-transparent`}>
@@ -1171,7 +1176,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="w-full overflow-x-auto overflow-y-hidden pb-4 horizontal-scroll-container">
+  <div className="w-full overflow-x-auto overflow-y-hidden pb-4 horizontal-scroll-container">
           <div className="flex gap-4 h-[calc(100vh-120px)] min-w-min">
             {columnsConfig.map(column => (
               <ChatColumn
@@ -1188,6 +1193,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
                 onOpenTaskManager={handleManageTasks}
                 onRefresh={loadTags}
                 onChatClosed={onChatClosed}
+                borderGradient={column.borderGradient}
                 showToast={showToast}
                 hideUploadChat={hideUploadChat}
                 toggleHideUploadChat={toggleHideUploadChat}

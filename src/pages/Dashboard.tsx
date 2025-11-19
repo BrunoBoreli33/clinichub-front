@@ -787,6 +787,62 @@ const Dashboard: React.FC = () => {
     }
   });
 
+  const fixedHScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Sincroniza um scrollbar fixo no rodapé com o container horizontal das colunas
+  useEffect(() => {
+    const fixedEl = fixedHScrollRef.current;
+    const cols = document.querySelector('.horizontal-scroll-container') as HTMLElement | null;
+    if (!fixedEl || !cols) return;
+
+    // scrollable wrapper inside the fixed footer (the element that actually scrolls)
+    const fixedWrapper = fixedEl.querySelector('.fixed-scroll-wrapper') as HTMLElement | null;
+    const fixedInner = fixedEl.querySelector('.fixed-scroll-inner') as HTMLElement | null;
+    if (!fixedWrapper || !fixedInner) return;
+
+    // hide native scrollbar of the columns container while our fixed scrollbar is present
+    cols.classList.add('hide-native-scrollbar');
+
+    const updateInnerWidth = () => {
+      fixedInner.style.width = `${cols.scrollWidth}px`;
+    };
+
+    let syncing = false;
+
+    const onColsScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      fixedWrapper.scrollLeft = cols.scrollLeft;
+      requestAnimationFrame(() => (syncing = false));
+    };
+
+    const onFixedScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      cols.scrollLeft = fixedWrapper.scrollLeft;
+      requestAnimationFrame(() => (syncing = false));
+    };
+
+    cols.addEventListener('scroll', onColsScroll, { passive: true });
+    fixedWrapper.addEventListener('scroll', onFixedScroll, { passive: true });
+    window.addEventListener('resize', updateInnerWidth);
+
+    const ro = new ResizeObserver(updateInnerWidth);
+    ro.observe(cols);
+
+    // set initial width and position
+    updateInnerWidth();
+    fixedWrapper.scrollLeft = cols.scrollLeft;
+
+    return () => {
+      cols.removeEventListener('scroll', onColsScroll);
+      fixedWrapper.removeEventListener('scroll', onFixedScroll);
+      window.removeEventListener('resize', updateInnerWidth);
+      ro.disconnect();
+      cols.classList.remove('hide-native-scrollbar');
+    };
+  }, [tagsVersion, chatsData]);
+
   // Listener para quando uma tag é adicionada a um chat (disparado pelo ChatColumns)
   useEffect(() => {
     const handleTagAddedToChat = () => {
@@ -1137,7 +1193,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f8f9] flex relative">
+  <div className="h-screen bg-[#f4f8f9] flex relative overflow-hidden">
       <Sidebar
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
@@ -1169,7 +1225,7 @@ const Dashboard: React.FC = () => {
         userName={dashboardData.user.name}
       />
 
-      <div className="flex-1 flex flex-col">
+  <div className="flex-1 flex flex-col overflow-x-hidden">
         <header className="bg-white border-b border-gray-200 relative">
           <div className="px-4 py-3 flex items-center">
             <button className="ml-6 p-2" onClick={() => setShowSidebar(true)} aria-label="Abrir menu">
@@ -1217,8 +1273,10 @@ const Dashboard: React.FC = () => {
               </Card>
             </div>
           ) : (
-            <div className="flex-1 p-4 overflow-hidden flex flex-col">
-              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex-1 p-4 flex flex-col overflow-hidden">
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap flex-shrink-0">
+                {/* ...existing static filter/search/export UI... */}
+                {/* This block stays fixed, never scrolls horizontally */}
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1230,8 +1288,6 @@ const Dashboard: React.FC = () => {
                       className="pl-9 pr-3 py-1 w-64 text-sm border rounded-md"
                     />
                   </div>
-
-                  {/* ✅ NOVO: Filtro de Chats Confiáveis */}
                   <button
                     onClick={() => setShowOnlyTrustworthy(!showOnlyTrustworthy)}
                     className={`px-3 py-1 rounded-full text-sm border transition-colors ${
@@ -1243,7 +1299,6 @@ const Dashboard: React.FC = () => {
                   >
                     Chats Confiáveis
                   </button>
-
                   <div className="text-sm text-gray-700 font-medium">Filtrar por etiquetas:</div>
                   <div className="flex items-center gap-2 flex-wrap">
                   <button
@@ -1268,7 +1323,6 @@ const Dashboard: React.FC = () => {
                   })}
                   </div>
                 </div>
-
                 <div className="ml-auto">
                   <button
                     onClick={exportFilteredToCSV}
@@ -1281,15 +1335,20 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-hidden">
-                <ChatColumns 
-                  chatsData={filteredChatsData} 
-                  showToast={showToast} 
-                  tagsVersion={tagsVersion}
-                  onChatClosed={reloadChats}
-                  onColumnChange={handleColumnChange}
-                  setOpenChatId={setOpenChatId}
-                />
+              {/* Content area scrolls vertically internally; only the columns area scrolls horizontally */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="min-w-0">
+                  <div className="overflow-x-auto" style={{ minWidth: 0 }}>
+                    <ChatColumns
+                      chatsData={filteredChatsData}
+                      showToast={showToast}
+                      tagsVersion={tagsVersion}
+                      onChatClosed={reloadChats}
+                      onColumnChange={handleColumnChange}
+                      setOpenChatId={setOpenChatId}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1344,6 +1403,12 @@ const Dashboard: React.FC = () => {
             onClose={() => setToast(null)}
           />
         )}
+        {/* Fixed horizontal scrollbar synced with ChatColumns */}
+        <div ref={fixedHScrollRef} className="fixed left-0 right-0 bottom-0 h-6 z-50 bg-white/0 pointer-events-auto">
+          <div className="h-6 overflow-x-auto overflow-y-hidden fixed-scroll-wrapper">
+            <div className="fixed-scroll-inner h-1" style={{ height: 1 }} />
+          </div>
+        </div>
       </div>
     </div>
   );

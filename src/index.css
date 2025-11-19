@@ -228,3 +228,12 @@ All colors MUST be HSL.
     scroll-behavior: auto;
   }
 }
+
+/* Classe utilitária: esconder a scrollbar nativa (cross-browser) */
+.hide-native-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.hide-native-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
