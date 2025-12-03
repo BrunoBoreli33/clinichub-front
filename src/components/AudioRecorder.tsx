@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, Square, Loader2 } from "lucide-react";
+import { Mic, Square } from "lucide-react";
 
 interface AudioRecorderProps {
   onAudioRecorded: (audioBase64: string, duration: number) => void;
@@ -13,13 +13,28 @@ const AudioRecorder = ({ onAudioRecorded, disabled }: AudioRecorderProps) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  // ✅ NOVO: Ref para armazenar a duração final da gravação
   const finalDurationRef = useRef<number>(0);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // ✅ SOLUÇÃO: Configurar MediaRecorder com bitRate de 128kbps para compatibilidade iOS
+      const options = {
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 128000  // 128 kbps - requerido pelo WhatsApp iOS
+      };
+      
+      // Verificar se o mimeType é suportado, senão usar padrão do navegador
+      let mediaRecorder: MediaRecorder;
+      if (MediaRecorder.isTypeSupported(options.mimeType)) {
+        mediaRecorder = new MediaRecorder(stream, options);
+        console.log('✅ Gravando com Opus 128kbps (compatível com iOS)');
+      } else {
+        // Fallback: tentar apenas com audioBitsPerSecond
+        mediaRecorder = new MediaRecorder(stream, { audioBitsPerSecond: 128000 });
+        console.log('⚠️ Opus não suportado, usando codec padrão com 128kbps');
+      }
       
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -36,12 +51,9 @@ const AudioRecorder = ({ onAudioRecorded, disabled }: AudioRecorderProps) => {
         
         reader.onloadend = () => {
           const base64Audio = reader.result as string;
-          
-          // ✅ MODIFICADO: Usar finalDurationRef ao invés de recordingTime
-          // para garantir que estamos usando a duração correta capturada no momento do stop
           const duration = finalDurationRef.current;
           
-          console.log(`🎤 Áudio gravado - Duração: ${duration} segundos`);
+          console.log(`🎤 Áudio gravado - Duração: ${duration}s - BitRate: 128kbps`);
           
           onAudioRecorded(base64Audio, duration);
           
@@ -70,11 +82,9 @@ const AudioRecorder = ({ onAudioRecorded, disabled }: AudioRecorderProps) => {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
-      // ✅ CRÍTICO: Capturar a duração ANTES de parar o timer
-      // para garantir que temos o valor correto
       finalDurationRef.current = recordingTime;
       
-      console.log(`⏹️ Parando gravação - Duração capturada: ${recordingTime} segundos`);
+      console.log(`ℹ️ Parando gravação - Duração capturada: ${recordingTime} segundos`);
       
       mediaRecorderRef.current.stop();
       setIsRecording(false);
