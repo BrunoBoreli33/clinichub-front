@@ -35,6 +35,7 @@ import type { ChatsData } from "@/types/chat";
 import { buildUrl } from "@/lib/api";
 import { useNotifications, NewMessageNotification, ChatUpdateNotification, TagUpdateNotification, TagDeleteNotification, TaskCompletedNotification } from "@/hooks/useNotifications";
 import clinicHubIco from "@/assets/clinichub.ico";
+import { useAutoReload } from "@/hooks/useAutoReload";
 
 interface DashboardData {
   user: {
@@ -788,6 +789,24 @@ const Dashboard: React.FC = () => {
     }
   });
 
+  // Sistema de auto-reload por inatividade
+  const isChatOpenRef = useRef<boolean>(false);
+
+  const { registerActivity } = useAutoReload({
+    inactivityTimeout: 10 * 60 * 1000, // 1 minuto
+    checkChatOpen: () => isChatOpenRef.current, // Verificar se há chat aberto
+    onReload: () => {
+      console.log("🔄 Recarregando sistema por inatividade...");
+    }
+  });
+
+
+  // Wrapper APENAS para rastrear se chat está aberto (SEM registrar atividade)
+  const setOpenChatIdWrapper = useCallback((chatId: string | null) => {
+    setOpenChatId(chatId);
+    isChatOpenRef.current = chatId !== null;
+  }, [setOpenChatId]);
+
   const fixedHScrollRef = useRef<HTMLDivElement | null>(null);
   const columnsContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -807,7 +826,7 @@ const Dashboard: React.FC = () => {
 
     // gap between columns (CSS gap / column-gap)
     const cs = window.getComputedStyle(inner as Element);
-    const gapStr = cs.columnGap || (cs as any).gap || '0px';
+    const gapStr = cs.columnGap || cs.gap || '0px';
     const gap = parseFloat(gapStr) || 0;
 
     const amount = Math.round(firstCol.getBoundingClientRect().width + gap);
@@ -1390,7 +1409,7 @@ const Dashboard: React.FC = () => {
                       tagsVersion={tagsVersion}
                       onChatClosed={reloadChats}
                       onColumnChange={handleColumnChange}
-                      setOpenChatId={setOpenChatId}
+                      setOpenChatId={setOpenChatIdWrapper}
                     />
                   </div>
                 </div>
