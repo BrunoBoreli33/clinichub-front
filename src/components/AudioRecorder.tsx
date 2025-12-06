@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, Square } from "lucide-react";
+import { Mic, Square, X } from "lucide-react";
 
 interface AudioRecorderProps {
   onAudioRecorded: (audioBase64: string, duration: number) => void;
@@ -95,6 +95,37 @@ const AudioRecorder = ({ onAudioRecorded, disabled }: AudioRecorderProps) => {
     }
   };
 
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      console.log(`🗑️ Cancelando gravação - Áudio descartado`);
+      
+      // Limpar timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      
+      // Limpar chunks para não processar o áudio
+      chunksRef.current = [];
+      
+      // Parar o stream do microfone
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+      
+      // Resetar estados
+      setIsRecording(false);
+      setRecordingTime(0);
+      finalDurationRef.current = 0;
+      
+      // Remover event listener para evitar processamento
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.onstop = null;
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
+      }
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -111,8 +142,17 @@ const AudioRecorder = ({ onAudioRecorded, disabled }: AudioRecorderProps) => {
           </div>
           <Button
             type="button"
+            onClick={cancelRecording}
+            className="h-10 w-10 p-0 bg-gray-400 hover:bg-gray-500 rounded-full"
+            title="Cancelar gravação"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
             onClick={stopRecording}
             className="h-10 w-10 p-0 bg-red-500 hover:bg-red-600 rounded-full"
+            title="Enviar áudio"
           >
             <Square className="h-4 w-4 fill-current" />
           </Button>
@@ -123,6 +163,7 @@ const AudioRecorder = ({ onAudioRecorded, disabled }: AudioRecorderProps) => {
           onClick={startRecording}
           disabled={disabled}
           className="h-10 w-10 p-0 bg-gray-200 hover:bg-gray-300 rounded-full"
+          title="Gravar áudio"
         >
           <Mic className="h-5 w-5 text-gray-700" />
         </Button>
