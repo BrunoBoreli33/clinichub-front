@@ -32,6 +32,7 @@ const columnsConfig = [
   { id: "tarefa", title: "Tarefa", color: "from-purple-500 to-purple-600", borderGradient: "linear-gradient(90deg,#a78bfa,#8b5cf6)" },
   { id: "lead_quente", title: "Lead Quente", color: "from-yellow-400 to-yellow-500", borderGradient: "linear-gradient(90deg,#facc15,#eab308)" },
   { id: "cliente", title: "Cliente", color: "from-emerald-500 to-emerald-600", borderGradient: "linear-gradient(90deg,#10b981,#059669)" },
+  { id: "agendado", title: "Agendado", color: "from-cyan-500 to-cyan-600", borderGradient: "linear-gradient(90deg,#06b6d4,#0891b2)" },
   { id: "lead_frio", title: "Lead Frio", color: "from-gray-400 to-gray-500", borderGradient: "linear-gradient(90deg,#9ca3af,#6b7280)" }
 ];
 
@@ -828,6 +829,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
     tarefa: [],
     lead_quente: [],
     cliente: [],
+    agendado: [],
     lead_frio: []
   });
 
@@ -940,6 +942,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
         tarefa: [],
         lead_quente: [],
         cliente: [],
+        agendado: [],
         lead_frio: []
       };
 
@@ -952,6 +955,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
           'task': 'tarefa',
           'hot_lead': 'lead_quente',
           'client': 'cliente',
+          'scheduled': 'agendado',
           'cold_lead': 'lead_frio',
           'Repescagem': 'repescagem',
           'Lead Quente': 'lead_quente',
@@ -1000,6 +1004,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
       'tarefa': 'task',
       'lead_quente': 'hot_lead',
       'cliente': 'client',
+      'agendado': 'scheduled',
       'lead_frio': 'cold_lead'
     };
 
@@ -1122,6 +1127,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
               tarefa: [],
               lead_quente: [],
               cliente: [],
+              agendado: [],
               lead_frio: []
             };
 
@@ -1134,6 +1140,7 @@ const ChatColumns = ({ chatsData, showToast, tagsVersion, onChatClosed, onColumn
                 'task': 'tarefa',
                 'hot_lead': 'lead_quente',
                 'client': 'cliente',
+                'scheduled': 'agendado',
                 'cold_lead': 'lead_frio',
                 'Repescagem': 'repescagem',
                 'Lead Quente': 'lead_quente',
