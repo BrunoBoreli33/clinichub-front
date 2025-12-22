@@ -1198,6 +1198,22 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(checkConnectionInterval);
   }, [isConnected, chatsData, showToast]);
 
+  // Auto-reload da listagem de chats a cada 30s enquanto conectado
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const reloadInterval = setInterval(async () => {
+      try {
+        await fetchChats(true);
+        lastFetchTimeRef.current = Date.now();
+      } catch (error) {
+        console.error('Erro no auto-reload de chats:', error);
+      }
+    }, 30000);
+
+    return () => clearInterval(reloadInterval);
+  }, [isConnected, fetchChats]);
+
   useEffect(() => {
     return () => {
       if (fetchChatsTimeoutRef.current) {
