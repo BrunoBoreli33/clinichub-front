@@ -1,61 +1,143 @@
-<<<<<<< HEAD
-# Welcome to your Lovable project
+<h1 align="center" style="font-weight: bold;">Project name 💻</h1>
 
-## Project info
+<p align="center">
+ <a href="#tech">Technologies</a> • 
+ <a href="#started">Getting Started</a> • 
+  <a href="#routes">API Endpoints</a> •
+ <a href="#colab">Collaborators</a> •
+ <a href="#contribute">Contribute</a>
+</p>
 
-**URL**: https://lovable.dev/projects/8cbb4cf4-89c8-4122-a316-7d9206b5af94
+<p align="center">
+    <b>Simple description of what your project do or how to use it.</b>
+</p>
 
-## How can I edit this code?
+<h2 id="technologies">💻 Technologies</h2>
 
-There are several ways of editing your application.
-# clinichub-front
-Clinic Hub CRM Front End
+- list of all technologies you used
+- Java
+- MongoDB
+- NodeJS
 
-## Como configurar no Render (passo a passo)
+<h2 id="started">🚀 Getting started</h2>
 
-1. Crie um novo serviço Web no Render ou conecte este repositório ao Render.
+Here you describe how to run your project locally
 
-2. No painel do projeto Render, abra `Environment` → `Environment Variables` (ou `Settings` → `Environment`).
+<h3>Prerequisites</h3>
 
-3. Adicione a variável de ambiente para a URL do backend (necessária em produção):
+Here you list all prerequisites necessary for running your project. For example:
 
-	- Key: `VITE_API_URL`
-	- Value: `https://clinichub-back-latest.onrender.com`
-	- Envie como `Production` (não `Pull Request` / `Preview`) se quiser só usar em produção.
+- [NodeJS](https://github.com/)
+- [Git 2](https://github.com)
 
-4. Configure o comando de build (Render geralmente detecta automaticamente via `package.json`):
+<h3>Cloning</h3>
 
-	- Build Command: `npm run build`
-	- Start Command / Serve: `npm run preview` (ou conforme instruções do Render — Render executa a build e serve os assets estáticos automaticamente em algumas configurações)
-
-5. Variáveis opcionais locais
-
-	- Para desenvolvimento local, mantenha o arquivo `.env` com `VITE_API_URL=` vazio (já incluído no repo). Quando a variável estiver vazia, a aplicação usará `http://localhost:8081` como fallback (comportamento para dev).
-
-6. Deploy
-
-	- Após salvar as configurações no Render, acione o deploy (Manual Deploy) ou permita que o Render faça deploy automático ao push no branch configurado (ex.: `main`).
-
-7. Verificação pós-deploy
-
-	- Verifique os logs do deploy no dashboard do Render para garantir que a build completou sem erros.
-	- Abra a URL pública fornecida pelo Render e teste fluxos que chamam o backend (login, cadastro, carregamento de chats). As chamadas do frontend irão para `VITE_API_URL` configurada.
-
-8. Dicas e troubleshooting
-
-	- Se nos logs do frontend aparecerem erros de CORS ou 404, verifique se o `VITE_API_URL` está correto e se o backend está acessível publicamente.
-	- Caso precise depurar localmente com as mesmas variáveis, exporte `VITE_API_URL` localmente antes de rodar a build:
+How to clone your project
 
 ```bash
-# Exemplo local (substitua pela URL de staging se necessário)
-export VITE_API_URL=https://clinichub-back-latest.onrender.com
-npm run build
-npm run preview
+git clone your-project-url-in-github
 ```
 
-	- O projeto já inclui um fallback: quando `import.meta.env.VITE_API_URL` for vazio, o frontend usa `http://localhost:8081` (útil para desenvolvimento local).
+<h3>Config .env variables</h2>
 
-## Observações
+Use the `.env.example` as reference to create your configuration file `.env` with your AWS Credentials
 
-- As chamadas HTTP do frontend foram centralizadas em `src/lib/api.ts` — use `buildUrl('/rota')` ou `API_BASE` quando criar novas chamadas ao backend.
-- Se preferir usar um proxy no Vite para desenvolvimento, também é possível configurar `vite.config.ts` com `server.proxy` apontando para `http://localhost:8081`.
+```yaml
+NODE_AWS_REGION=us-east-1
+NODE_AWS_KEY_ID={YOUR_AWS_KEY_ID}
+NODE_AWS_SECRET={YOUR_AWS_SECRET}
+```
+
+<h3>Starting</h3>
+
+How to start your project
+
+```bash
+cd project-name
+npm some-command-to-run
+```
+
+<h2 id="routes">📍 API Endpoints</h2>
+
+Here you can list the main routes of your API, and what are their expected request bodies.
+​
+| route               | description                                          
+|----------------------|-----------------------------------------------------
+| <kbd>GET /authenticate</kbd>     | retrieves user info see [response details](#get-auth-detail)
+| <kbd>POST /authenticate</kbd>     | authenticate user into the api see [request details](#post-auth-detail)
+
+<h3 id="get-auth-detail">GET /authenticate</h3>
+
+**RESPONSE**
+```json
+{
+  "name": "Fernanda Kipper",
+  "age": 20,
+  "email": "her-email@gmail.com"
+}
+```
+
+<h3 id="post-auth-detail">POST /authenticate</h3>
+
+**REQUEST**
+```json
+{
+  "username": "fernandakipper",
+  "password": "4444444"
+}
+```
+
+**RESPONSE**
+```json
+{
+  "token": "OwoMRHsaQwyAgVoc3OXmL1JhMVUYXGGBbCTK0GBgiYitwQwjf0gVoBmkbuyy0pSi"
+}
+```
+
+<h2 id="colab">🤝 Collaborators</h2>
+
+Special thank you for all people that contributed for this project.
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="#">
+        <img src="https://avatars.githubusercontent.com/u/61896274?v=4" width="100px;" alt="Fernanda Kipper Profile Picture"/><br>
+        <sub>
+          <b>Fernanda Kipper</b>
+        </sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="#">
+        <img src="https://t.ctcdn.com.br/n7eZ74KAcU3iYwnQ89-ul9txVxc=/400x400/smart/filters:format(webp)/i490769.jpeg" width="100px;" alt="Elon Musk Picture"/><br>
+        <sub>
+          <b>Elon Musk</b>
+        </sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="#">
+        <img src="https://miro.medium.com/max/360/0*1SkS3mSorArvY9kS.jpg" width="100px;" alt="Foto do Steve Jobs"/><br>
+        <sub>
+          <b>Steve Jobs</b>
+        </sub>
+      </a>
+    </td>
+  </tr>
+</table>
+
+<h2 id="contribute">📫 Contribute</h2>
+
+Here you will explain how other developers can contribute to your project. For example, explaining how can create their branches, which patterns to follow and how to open an pull request
+
+1. `git clone https://github.com/Fernanda-Kipper/text-editor.git`
+2. `git checkout -b feature/NAME`
+3. Follow commit patterns
+4. Open a Pull Request explaining the problem solved or feature made, if exists, append screenshot of visual modifications and wait for the review!
+
+<h3>Documentations that might help</h3>
+
+[📝 How to create a Pull Request](https://www.atlassian.com/br/git/tutorials/making-a-pull-request)
+
+[💾 Commit pattern](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716)
