@@ -1,4 +1,4 @@
-<h1 align="center" style="font-weight: bold;">Project name 💻</h1>
+<h1 align="center" style="font-weight: bold;">WhatsApp CRM 💻 - FrontEnd</h1>
 
 <p align="center">
  <a href="#tech">Technologies</a> • 
@@ -8,18 +8,14 @@
 </p>
 
 <p align="center">
-    <b>Simple description of what your project do or how to use it</b>
-</p>
-
-<p align="center">
-     <a href="PROJECT__URL">📱 Visit this Project</a>
+    <b>Plataforma de CRM integrada à API do WhatsApp que automatiza toda a gestão e nutrição de leads, otimizando o atendimento e aumentando a conversão de clientes para empresas.</b>
 </p>
 
 <h2 id="layout">🎨 Layout</h2>
 
 <p align="center">
-    <img src="../.github/example.png" alt="Image Example" width="400px">
-    <img src="../.github/example.png" alt="Image Example" width="400px">
+    <img src="../../.github/blob/dashboard.png" alt="Image Example" width="400px">
+    <img src="../.github/dashboard.png" alt="Image Example" width="400px">
 </p>
 
 <h2 id="technologies">💻 Technologies</h2>
