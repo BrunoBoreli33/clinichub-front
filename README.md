@@ -86,7 +86,7 @@ Dentro dos chats podemos mandar mensagens de texto, fotos, vídeos, documentos, 
     <img src=".github/Fotos FrontEnd/Chat 2.png" alt="Dashboard" width="800px">
 </p>
 
-Além disso veremos também na imagem abaixo o botão da galeria, onde podemos salvar fotos e vídeos e depois mandar para qualquer outra pessoa:
+Além disso temos também o botão da galeria, onde podemos salvar fotos e vídeos e depois mandar para qualquer outra pessoa:
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Chat 3.png" alt="Dashboard" width="800px">
@@ -96,7 +96,7 @@ Além disso veremos também na imagem abaixo o botão da galeria, onde podemos s
 
 <h3 align="left">Etiquetas</h3>
 
-Poderemos cadastrar etiquetas para etiquetar os chats, depois que o chat for etiquetado, ele pode ser filtrado no filtro de etiquetas.
+Podemos cadastrar etiquetas para etiquetar os chats, depois que o chat for etiquetado, ele pode ser filtrado no filtro de etiquetas.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Gerenciador de Etiquetas.png" alt="Dashboard" width="800px">
