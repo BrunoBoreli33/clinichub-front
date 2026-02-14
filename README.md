@@ -3,7 +3,7 @@
 <p align="center">
  <a href="#technologies">Tecnologias</a> • 
  <a href="#started">Telas e Funcionalidades</a> • 
- <a href="#started">Configurando o Projeto</a> • 
+ <a href="#config">Configurando o Projeto</a> • 
  <a href="#contribute">Contribuir</a>
 </p>
 
@@ -188,7 +188,7 @@ Dentro de cada chat teremos as opções daquele respectivo chat. Nelas poderemos
 
 ---
 
-<h2 id="started">🚀 Configurando o Projeto</h2>
+<h2 id="config">🚀 Configurando o Projeto</h2>
 
 <h3>Pré-Requisitos</h3>
 
