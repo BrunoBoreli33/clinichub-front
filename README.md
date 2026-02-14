@@ -25,6 +25,7 @@
 - React 18 - Biblioteca principal para UI (usando react-dom/client)
 - TypeScript - Linguagem de programação tipada
 - Vite - Build tool e bundler
+- VS Code
 
 <h3 align="left">Estilização</h3>
 
