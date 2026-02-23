@@ -68,7 +68,7 @@
 
 Conheça um panorama das funcionalidades estratégicas do WhatsApp CRM, projetadas para transformar a comunicação com clientes em uma experiência ágil, inteligente e altamente eficiente.
 
-<h3 align="center">Dashboard</h3>
+<h3 align="left">Dashboard</h3>
 
 O Dashboard é o centro de comando do sistema, onde o usuário gerencia toda a operação de leads de forma estratégica e intuitiva. As mensagens recebidas são notificadas em tempo real, enquanto os chats são organizados automaticamente do mais recente ao mais antigo, garantindo agilidade no atendimento. A plataforma também oferece recursos avançados como etiquetagem de conversas, disparo de campanhas, mensagens de reengajamento, agendamento inteligente de envios (texto, imagem ou vídeo), exportação de relatórios detalhados de interações e diversas outras funcionalidades projetadas para maximizar produtividade e resultados.
 
