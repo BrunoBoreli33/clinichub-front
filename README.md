@@ -66,11 +66,11 @@
 
 <h2 id="started">Telas e Funcionalidades</h2>
 
-De maneira resumida vou dar uma introdução a cada funcionalidade do sistema WhatsApp CRM
+Conheça um panorama das funcionalidades estratégicas do WhatsApp CRM, projetadas para transformar a comunicação com clientes em uma experiência ágil, inteligente e altamente eficiente.
 
-<h3 align="left">Dashboard</h3>
+<h3 align="center">Dashboard</h3>
 
-O DashBoard é onde o usuário poderá fazer toda a gestão LEADS, as mensagens quando chegam são notificadas e os chats ficam ordenados pela data da última mensagem do mais recente para o mais antigo. Pode-se também etiquetar o chat, fazer disparos de campanha, mensagens de repescagem, agendador de tarefas (envio de texto, foto ou vídeo em data programada), exportação de relatório de conversas, dentre outras funcionalidades.
+O Dashboard é o centro de comando do sistema, onde o usuário gerencia toda a operação de leads de forma estratégica e intuitiva. As mensagens recebidas são notificadas em tempo real, enquanto os chats são organizados automaticamente do mais recente ao mais antigo, garantindo agilidade no atendimento. A plataforma também oferece recursos avançados como etiquetagem de conversas, disparo de campanhas, mensagens de reengajamento, agendamento inteligente de envios (texto, imagem ou vídeo), exportação de relatórios detalhados de interações e diversas outras funcionalidades projetadas para maximizar produtividade e resultados.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Dashboard.png" alt="Dashboard" width="800px">
@@ -80,13 +80,13 @@ O DashBoard é onde o usuário poderá fazer toda a gestão LEADS, as mensagens 
 
 <h3 align="left">Chats</h3>
 
-Dentro dos chats podemos mandar mensagens de texto, fotos, vídeos, documentos, figurinhas e áudio. Também temos o botão onde podemos mandar os textos pré-configurados, como veremos na imagem abaixo:
+Dentro dos chats, o usuário conta com uma experiência completa de comunicação, podendo enviar mensagens de texto, imagens, vídeos, documentos, emojis e áudios de forma rápida e integrada. Além disso, a plataforma disponibiliza um botão exclusivo para envio de respostas pré-configuradas, permitindo agilizar atendimentos, padronizar comunicações e aumentar a eficiência operacional — como ilustrado na imagem abaixo.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Chat 2.png" alt="Dashboard" width="800px">
 </p>
 
-Além disso temos também o botão da galeria, onde podemos salvar fotos e vídeos e depois mandar para qualquer outra pessoa:
+Além disso, a plataforma conta com um botão de Galeria, que permite armazenar fotos e vídeos para reutilização sempre que necessário, possibilitando o envio rápido desses arquivos para qualquer contato. Esse recurso otimiza o tempo de atendimento, facilita o compartilhamento de conteúdos e garante mais praticidade na comunicação.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Chat 3.png" alt="Dashboard" width="800px">
@@ -96,7 +96,7 @@ Além disso temos também o botão da galeria, onde podemos salvar fotos e víde
 
 <h3 align="left">Etiquetas</h3>
 
-Podemos cadastrar etiquetas para etiquetar os chats, depois que o chat for etiquetado, ele pode ser filtrado no filtro de etiquetas.
+O sistema também permite cadastrar etiquetas personalizadas para organizar os chats de forma estratégica. Após etiquetar uma conversa, ela pode ser facilmente localizada por meio do filtro de etiquetas, proporcionando mais controle, agilidade na gestão e uma visão segmentada dos atendimentos.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Gerenciador de Etiquetas.png" alt="Dashboard" width="800px">
@@ -106,7 +106,7 @@ Podemos cadastrar etiquetas para etiquetar os chats, depois que o chat for etiqu
 
 <h3 align="left">Disparo de Campanha</h3>
 
-Na funcionalidade Disparo de Campanha, podemos selecionar uma ou mais etiquetas para mandar as mensagens. Nas mensagens poderão conter: texto, fotos e vídeos. A idéia é nichar os chats e quando tiver uma promoção de determinado produto, mandaremos a promoção apenas para o público específico. Lembrando que por ser uma funcionalidade com risco de banimento de número (caso haja mais de 3% de denúncias de spam), teremos primeiro que marcar aquele chat como confiável.
+Na funcionalidade Disparo de Campanha, é possível selecionar uma ou múltiplas etiquetas para enviar mensagens segmentadas, que podem incluir texto, imagens e vídeos. Esse recurso permite direcionar promoções e comunicações apenas para públicos específicos, aumentando a relevância das campanhas e as chances de conversão. Para garantir segurança e conformidade com boas práticas de uso — já que taxas elevadas de denúncias de spam podem gerar restrições — o sistema exige que o contato seja previamente marcado como confiável antes do envio, assegurando campanhas mais seguras e eficientes.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Disparo de Campanha.png" alt="Dashboard" width="800px">
@@ -116,7 +116,7 @@ Na funcionalidade Disparo de Campanha, podemos selecionar uma ou mais etiquetas 
 
 <h3 align="left">Galeria</h3>
 
-Quando recebemos fotos ou vídeos dentro dos chats, poderemos clicar nas opções do arquivo e salvar esse arquivo na galeria, onde poderemos enviar para outros contatos posteriormente. No menu do sistema, também poderemos fazer upload de fotos direto do computador.
+Sempre que fotos ou vídeos são recebidos nos chats, o usuário pode salvá-los diretamente na Galeria por meio das opções do próprio arquivo, permitindo reutilizar e encaminhar esse conteúdo para outros contatos de forma rápida e prática. Além disso, o sistema também possibilita o upload de mídias diretamente do computador pelo menu principal, ampliando a flexibilidade e agilizando o compartilhamento de materiais.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Galeria.png" alt="Dashboard" width="800px">
@@ -126,7 +126,7 @@ Quando recebemos fotos ou vídeos dentro dos chats, poderemos clicar nas opçõe
 
 <h3 align="left">Menu do Sistema</h3>
 
-No menu do sistema é onde poderemos fazer as configurações das seguintes funcionalidades:
+O menu do sistema reúne todas as configurações essenciais da plataforma, permitindo personalizar e gerenciar de forma centralizada as seguintes funcionalidades:
 
 - Gerenciar Etiquetas
 - Rotinas Automáticas
@@ -144,7 +144,7 @@ No menu do sistema é onde poderemos fazer as configurações das seguintes func
 
 <h3 align="left">Informações da Conta</h3>
 
-Aqui é onde podemos mudar o nome do usuário, alterar a senha e alterar o e-mail. Lembrando que para alterar a senha e o e-mail teremos que verificar um código que será enviado no e-mail cadastrado, para confirmar que é realmente você que está alterando essas informações.
+Nesta seção, o usuário pode atualizar seus dados de acesso com total segurança, incluindo alteração de nome, senha e e-mail. Para mudanças sensíveis como senha e endereço de e-mail, o sistema realiza uma verificação por código enviado ao e-mail cadastrado, garantindo autenticação do solicitante e proteção adicional contra acessos não autorizados.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Info da Conta.png" alt="Dashboard" width="800px">
@@ -154,7 +154,7 @@ Aqui é onde podemos mudar o nome do usuário, alterar a senha e alterar o e-mai
 
 <h3 align="left">Rotinas Automáticas</h3>
 
-Nas Rotinas automáticas poderemos fazer a repescagem. Para ativar a repescagem, o critério é que a última mensagem do chat deve ser RECEBIDA, e a partir do tempo configurado no painel da repescagem, o sistema mandará a primeira mensagem para o cliente, fazendo isso sucessivamente por até 7 mensagens. Depois que a última mensagem configurada for enviada e não tiver resposta por parte do LEAD, o chat será movido para a coluna "Lead Frio".
+Na funcionalidade de Rotinas Automáticas, é possível configurar a repescagem de leads de forma inteligente e estratégica. O sistema identifica automaticamente conversas cuja última mensagem foi recebida e, após o intervalo definido no painel, inicia o envio sequencial de mensagens programadas — podendo chegar a até 7 tentativas de reengajamento. Caso não haja resposta após a última mensagem configurada, o chat é automaticamente movido para a coluna “Lead Frio”, mantendo o funil organizado e permitindo que a equipe foque nos contatos com maior potencial de conversão.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Rotinas Automáticas.png" alt="Dashboard" width="800px">
@@ -164,7 +164,7 @@ Nas Rotinas automáticas poderemos fazer a repescagem. Para ativar a repescagem,
 
 <h3 align="left">Textos Pré-Configurados</h3>
 
-Os textos Pré-Configurados, são mensagens padrão que poderão ser salvas no sistema para agilizar na hora de responder clientes.
+Os Textos Pré-Configurados permitem salvar mensagens padrão diretamente no sistema, agilizando respostas, padronizando a comunicação e garantindo mais produtividade no atendimento ao cliente.
 
 <p align="center">
     <img src=".github/Fotos FrontEnd/Textos Pré-Configurados.png" alt="Dashboard" width="800px">
@@ -174,7 +174,7 @@ Os textos Pré-Configurados, são mensagens padrão que poderão ser salvas no s
 
 <h3 align="left">Opções do Chat</h3>
 
-Dentro de cada chat teremos as opções daquele respectivo chat. Nelas poderemos:
+Dentro de cada chat, o usuário tem acesso a um painel de ações exclusivas da conversa, onde é possível executar diversas operações estratégicas, como:
 
 - Etiquetar o respectivo chat. (com 1 ou mais etiquetas)
 - Agendar uma tarefa para aquele chat. (Enviar uma mensagem, foto ou vídeo em uma determinada data).
